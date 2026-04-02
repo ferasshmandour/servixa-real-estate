@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Servixa - Business Account Sequence Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #F8F7FF;
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #6B21A8;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        h2 {
+            color: #6B7280;
+            font-size: 14px;
+            font-weight: 400;
+            margin-bottom: 32px;
+        }
+        .diagram-container {
+            background: #FFFFFF;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(107, 33, 168, 0.08);
+            border: 1px solid #DDD6FE;
+            padding: 32px;
+            max-width: 1200px;
+            width: 100%;
+            overflow-x: auto;
+        }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+        .legend {
+            margin-top: 24px;
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #1F2937;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .dot-pending { background: #D97706; }
+        .dot-approved { background: #16A34A; }
+        .dot-rejected { background: #DC2626; }
+        .dot-api { background: #6B21A8; }
+        .print-btn {
+            margin-top: 24px;
+            padding: 10px 24px;
+            background: #6B21A8;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .print-btn:hover { background: #7C3AED; }
+        @media print {
+            .print-btn { display: none; }
+            body { background: white; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<h1>Servixa — Business Account Sequence Diagram</h1>
+<h2>Full lifecycle: Creation, Review, Approval/Rejection, and Usage</h2>
+
+<div class="diagram-container">
+    <pre class="mermaid">
+sequenceDiagram
+    autonumber
+
+    actor User as Mobile User
+    participant API as Laravel API<br/>(auth:api)
+    participant Auth as AuthService<br/>(Passport)
+    participant BAS as BusinessAccount<br/>Service
+    participant DB as MySQL<br/>Database
+    participant Admin as Admin<br/>(Dashboard)
+    participant Notif as Notification<br/>Service
+
+    Note over User, Notif: ═══ PHASE 1: CREATE BUSINESS ACCOUNT (FR-05) ═══
+
+    User->>+API: POST /api/v1/business-accounts<br/>Headers: Authorization: Bearer {token}<br/>Body: { activity_type_id, city_id,<br/>license_number, name: {ar, en},<br/>activities: {ar, en}, details: {ar, en},<br/>latitude, longitude, files[] }
+
+    API->>API: StoreBusinessAccountRequest<br/>validates all fields
+
+    API->>+Auth: Verify Bearer Token<br/>(auth:api middleware)
+    Auth-->>-API: User authenticated ✓
+
+    API->>+BAS: create(validated data)
+
+    BAS->>+DB: INSERT INTO business_accounts<br/>status = 'pending'
+    DB-->>-BAS: Business Account #123 created
+
+    BAS->>+DB: INSERT INTO business_account_files<br/>(documents & images)
+    DB-->>-BAS: Files saved ✓
+
+    BAS-->>-API: BusinessAccount model
+
+    API-->>-User: 201 Created<br/>{ success: true,<br/>message: "Business account submitted for review",<br/>data: { id: 123, status: "pending", ... } }
+
+    Note over User, Notif: ═══ PHASE 2: VIEW MY BUSINESS ACCOUNTS (FR-07) ═══
+
+    User->>+API: GET /api/v1/business-accounts<br/>Authorization: Bearer {token}
+
+    API->>+BAS: getUserAccounts(user_id)
+    BAS->>+DB: SELECT * FROM business_accounts<br/>WHERE user_id = {id}
+    DB-->>-BAS: [Account #123 (pending),<br/>Account #99 (approved)]
+    BAS-->>-API: Collection of accounts
+
+    API-->>-User: 200 OK<br/>{ success: true, data: [...] }
+
+    Note over User, Notif: ═══ PHASE 3: EDIT BUSINESS ACCOUNT (FR-06) ═══
+
+    User->>+API: PUT /api/v1/business-accounts/123<br/>Body: { name: {ar: "updated", en: "updated"} }
+
+    API->>API: UpdateBusinessAccountRequest<br/>validates + checks ownership
+
+    API->>+BAS: update(123, validated data)
+    BAS->>+DB: UPDATE business_accounts<br/>SET name = '...', updated_at = NOW()<br/>WHERE id = 123
+    DB-->>-BAS: Updated ✓
+    BAS-->>-API: Updated BusinessAccount
+
+    API-->>-User: 200 OK<br/>{ success: true,<br/>message: "Business account updated" }
+
+    Note over User, Notif: ═══ PHASE 4: ADMIN REVIEWS ACCOUNT ═══
+
+    Note over Admin, DB: Admin logs in via /admin/login<br/>(Session auth, guard: admin)
+
+    Admin->>+API: GET /admin/business-accounts<br/>?status=pending<br/>(auth:admin + permission middleware)
+    API->>+DB: SELECT * FROM business_accounts<br/>WHERE status = 'pending'
+    DB-->>-API: [Account #123, ...]
+    API-->>-Admin: Render Blade view<br/>business-accounts/index.blade.php
+
+    Admin->>+API: GET /admin/business-accounts/123
+    API->>+DB: SELECT * FROM business_accounts<br/>JOIN business_account_files<br/>JOIN users ON user_id<br/>JOIN cities ON city_id<br/>JOIN activity_types ON activity_type_id<br/>WHERE id = 123
+    DB-->>-API: Full account details
+    API-->>-Admin: Render Blade view<br/>business-accounts/show.blade.php
+
+    Note over User, Notif: ═══ PHASE 5A: ADMIN APPROVES (FR-08) ═══
+
+    Admin->>+API: POST /admin/business-accounts/123/approve<br/>(requires 'business-accounts.approve' permission)
+
+    API->>+BAS: approve(123)
+    BAS->>+DB: UPDATE business_accounts<br/>SET status = 'approved'<br/>WHERE id = 123
+    DB-->>-BAS: Updated ✓
+    BAS-->>-API: Approved ✓
+
+    API->>+Notif: send(user_id, "Business Account Approved",<br/>"Your account has been approved!")
+    Notif->>+DB: INSERT INTO notifications
+    DB-->>-Notif: Saved ✓
+    Notif->>Notif: Firebase FCM Push<br/>to user's device_token
+    Notif-->>-API: Notification sent ✓
+
+    API-->>-Admin: Redirect with success flash<br/>"Account approved successfully"
+
+    Note over User, Notif: ═══ PHASE 5B: ADMIN REJECTS (FR-09) ═══
+
+    Admin->>+API: POST /admin/business-accounts/123/reject<br/>Body: { rejection_reason: "Invalid license" }
+
+    API->>+BAS: reject(123, reason)
+    BAS->>+DB: UPDATE business_accounts<br/>SET status = 'rejected',<br/>rejection_reason = 'Invalid license'<br/>WHERE id = 123
+    DB-->>-BAS: Updated ✓
+    BAS-->>-API: Rejected ✓
+
+    API->>+Notif: send(user_id, "Business Account Rejected",<br/>"Reason: Invalid license")
+    Notif->>+DB: INSERT INTO notifications
+    DB-->>-Notif: Saved ✓
+    Notif->>Notif: Firebase FCM Push
+    Notif-->>-API: Notification sent ✓
+
+    API-->>-Admin: Redirect with success flash<br/>"Account rejected"
+
+    Note over User, Notif: ═══ PHASE 6: USER POSTS SERVICE (requires approved account) ═══
+
+    User->>+API: POST /api/v1/services<br/>Body: { business_account_id: 123, ... }
+
+    API->>+BAS: verifyApproved(123, user_id)
+    BAS->>+DB: SELECT status FROM business_accounts<br/>WHERE id = 123 AND user_id = {id}
+    DB-->>-BAS: status = 'approved' ✓
+    BAS-->>-API: Account is approved ✓
+
+    API->>API: Proceed with service creation...
+
+    API-->>-User: 201 Created<br/>{ success: true, data: { service } }
+
+    Note over User, API: ⛔ If account is NOT approved:
+    Note over API: 403 Forbidden<br/>{ success: false,<br/>message: "Business account not approved" }
+    </pre>
+</div>
+
+<div class="legend">
+    <div class="legend-item"><div class="legend-dot dot-api"></div> API / Service Layer</div>
+    <div class="legend-item"><div class="legend-dot dot-pending"></div> Pending State</div>
+    <div class="legend-item"><div class="legend-dot dot-approved"></div> Approved State</div>
+    <div class="legend-item"><div class="legend-dot dot-rejected"></div> Rejected State</div>
+</div>
+
+<button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+
+<script>
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'base',
+        themeVariables: {
+            primaryColor: '#F5F3FF',
+            primaryBorderColor: '#6B21A8',
+            primaryTextColor: '#1F2937',
+            secondaryColor: '#FEF3C7',
+            tertiaryColor: '#DCFCE7',
+            lineColor: '#6B21A8',
+            textColor: '#1F2937',
+            actorBkg: '#6B21A8',
+            actorTextColor: '#FFFFFF',
+            actorBorder: '#6B21A8',
+            activationBkgColor: '#F5F3FF',
+            activationBorderColor: '#DDD6FE',
+            noteBkgColor: '#FEF3C7',
+            noteTextColor: '#1F2937',
+            noteBorderColor: '#D97706',
+            signalColor: '#6B21A8',
+            signalTextColor: '#1F2937',
+            sequenceNumberColor: '#FFFFFF',
+            fontFamily: 'Segoe UI, system-ui, sans-serif',
+            fontSize: '13px',
+        },
+        sequence: {
+            diagramMarginX: 20,
+            diagramMarginY: 20,
+            actorMargin: 60,
+            width: 180,
+            height: 50,
+            boxMargin: 10,
+            boxTextMargin: 5,
+            noteMargin: 10,
+            messageMargin: 40,
+            mirrorActors: false,
+            useMaxWidth: false,
+        }
+    });
+</script>
+
+</body>
+</html>

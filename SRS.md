@@ -272,7 +272,7 @@ User A (mobile)     Laravel API          Pusher           User B (mobile)
     │── POST /messages ─►│                  │                   │
     │                   │── broadcast ──────►│                  │
     │◄── 201 {message}  │   MessageSent      │                  │
-    │                   │                   │── push to channel ►│
+    │                   │                   │── push to PRIVATE channel ►│
     │                   │                   │                   │ receives in real-time
 ```
 
@@ -305,10 +305,11 @@ Mobile App                    Laravel API
 | API Auth | Laravel Passport | 12.x | OAuth2 token-based mobile auth (Password Grant) |
 | Admin Auth | Laravel built-in | — | Session-based web auth |
 | Roles & Perms | spatie/laravel-permission | 6.x | Role/permission system |
+| Translations | spatie/laravel-translatable | 6.x | JSON-based bilingual columns (ar/en) |
 | Image Handling | intervention/image | 3.x | Resize, store, optimize images |
 | HTTP Client | Laravel Http (built-in) | — | UltraMsg WhatsApp OTP calls |
 | Push Notifications | kreait/laravel-firebase | 7.x | Firebase FCM push |
-| Real-time Chat | pusher/pusher-php-server | 7.x | Broadcast chat events |
+| Real-time Chat | pusher/pusher-php-server | 7.x | Private channel chat (1-to-1, NOT public channels) |
 | Broadcasting | Laravel Echo (server) | — | Pusher event broadcasting |
 
 ### Frontend (Admin Dashboard Only)
@@ -327,7 +328,7 @@ Mobile App                    Laravel API
 |---|---|---|
 | WhatsApp OTP | UltraMsg | Send OTP to user's phone via WhatsApp |
 | Push Notifications | Firebase FCM | Push alerts to mobile app |
-| Real-time | Pusher | WebSocket-based chat |
+| Real-time | Pusher | Private channel chat (1-to-1 messaging) |
 | Maps | Google Maps (embed) | Location display on service detail |
 
 ### Composer Packages to Install
@@ -335,6 +336,7 @@ Mobile App                    Laravel API
 ```bash
 composer require laravel/passport
 composer require spatie/laravel-permission
+composer require spatie/laravel-translatable
 composer require intervention/image
 composer require kreait/laravel-firebase
 composer require pusher/pusher-php-server
@@ -861,6 +863,10 @@ Response 201: { "success": true, "data": { MessageResource } }
 
 ## 9. Database Design (ERD)
 
+> **Note:** All bilingual columns use `JSON` type via `spatie/laravel-translatable`.
+> Example: `name JSON` stores `{"ar": "دمشق", "en": "Damascus"}`.
+> Models declare `public $translatable = ['name'];` and the trait handles locale-aware access.
+
 ### Table Definitions
 
 ---
@@ -922,8 +928,7 @@ PRIMARY KEY (permission_id, role_id)
 **`cities`**
 ```
 id                  BIGINT PK
-name_ar             VARCHAR(100)
-name_en             VARCHAR(100)
+name                JSON                            ← {"ar": "دمشق", "en": "Damascus"}
 created_at / updated_at
 ```
 
@@ -932,8 +937,7 @@ created_at / updated_at
 **`activity_types`**
 ```
 id                  BIGINT PK
-name_ar             VARCHAR(100)
-name_en             VARCHAR(100)
+name                JSON                            ← {"ar": "مورّد", "en": "Supplier"}
 created_at / updated_at
 ```
 
@@ -946,10 +950,9 @@ user_id             BIGINT FK → users.id
 activity_type_id    BIGINT FK → activity_types.id
 city_id             BIGINT FK → cities.id
 license_number      VARCHAR(100)
-name_ar             VARCHAR(200)
-name_en             VARCHAR(200)
-activities          TEXT
-details             TEXT
+name                JSON                            ← {"ar": "شركة النور", "en": "Al-Noor Company"}
+activities          JSON                            ← translatable
+details             JSON                            ← translatable
 address             TEXT NULLABLE
 latitude            DECIMAL(10,7) NULLABLE
 longitude           DECIMAL(10,7) NULLABLE
@@ -975,8 +978,7 @@ created_at / updated_at
 ```
 id                  BIGINT PK
 parent_id           BIGINT FK → categories.id NULLABLE   ← NULL = main category
-name_ar             VARCHAR(150)
-name_en             VARCHAR(150)
+name                JSON                            ← translatable
 icon                VARCHAR(255) NULLABLE
 sort_order          INT DEFAULT 0
 created_at / updated_at
@@ -988,8 +990,7 @@ created_at / updated_at
 ```
 id                  BIGINT PK
 category_id         BIGINT FK → categories.id
-label_ar            VARCHAR(150)
-label_en            VARCHAR(150)
+label               JSON                            ← translatable
 field_type          ENUM('text','number','select','textarea','boolean')
 options             JSON NULLABLE                  ← for select type: ["Option A","Option B"]
 is_required         BOOLEAN DEFAULT false
@@ -1017,10 +1018,8 @@ id                  BIGINT PK
 business_account_id BIGINT FK → business_accounts.id
 category_id         BIGINT FK → categories.id
 subcategory_id      BIGINT FK → categories.id NULLABLE
-title_ar            VARCHAR(255)
-title_en            VARCHAR(255)
-description_ar      TEXT
-description_en      TEXT
+title               JSON                            ← translatable
+description         JSON                            ← translatable
 available_quantity  INT DEFAULT 1
 main_image          VARCHAR(255)
 type                ENUM('sale','rent')

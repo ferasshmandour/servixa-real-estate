@@ -11,8 +11,7 @@ return new class extends Migration
         Schema::create('dynamic_fields', function (Blueprint $table) {
             $table->id();
             $table->foreignId('category_id')->constrained()->cascadeOnDelete();
-            $table->string('label_ar');
-            $table->string('label_en');
+            $table->json('label'); // translatable
             $table->enum('field_type', ['text', 'number', 'select', 'textarea', 'boolean']);
             $table->json('options')->nullable();
             $table->boolean('is_required')->default(false);

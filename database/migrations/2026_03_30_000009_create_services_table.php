@@ -13,10 +13,8 @@ return new class extends Migration
             $table->foreignId('business_account_id')->constrained()->cascadeOnDelete();
             $table->foreignId('category_id')->constrained();
             $table->foreignId('subcategory_id')->nullable()->constrained('categories');
-            $table->string('title_ar');
-            $table->string('title_en');
-            $table->text('description_ar');
-            $table->text('description_en');
+            $table->json('title');       // translatable
+            $table->json('description'); // translatable
             $table->integer('available_quantity')->default(1);
             $table->string('main_image');
             $table->enum('type', ['sale', 'rent']);

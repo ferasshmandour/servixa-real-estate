@@ -1,11 +1,24 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityTypeController;
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\Admin\BusinessAccountController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CityController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\DynamicFieldController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('admin.login');
 });
+
+Route::get('/locale/{lang}', function (string $lang) {
+    if (in_array($lang, ['en', 'ar'])) {
+        session(['locale' => $lang]);
+    }
+    return redirect()->back();
+})->name('locale.switch');
 
 // Admin routes
 Route::prefix('admin')->group(function () {
@@ -13,9 +26,66 @@ Route::prefix('admin')->group(function () {
     Route::post('/login', [AdminAuthController::class, 'login'])->name('admin.login.submit');
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('admin.logout');
 
-    Route::middleware('auth:admin')->group(function () {
-        Route::get('/dashboard', function () {
-            return 'Admin Dashboard — Placeholder (Phase 2)';
-        })->name('admin.dashboard');
+    Route::middleware('auth:admin')->name('admin.')->group(function () {
+
+        // Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Business Accounts
+        Route::middleware('permission:view-business-accounts')->group(function () {
+            Route::get('/business-accounts', [BusinessAccountController::class, 'index'])->name('business-accounts.index');
+            Route::get('/business-accounts/{businessAccount}', [BusinessAccountController::class, 'show'])->name('business-accounts.show');
+        });
+        Route::middleware('permission:manage-business-accounts')->group(function () {
+            Route::post('/business-accounts/{businessAccount}/approve', [BusinessAccountController::class, 'approve'])->name('business-accounts.approve');
+            Route::post('/business-accounts/{businessAccount}/reject', [BusinessAccountController::class, 'reject'])->name('business-accounts.reject');
+        });
+
+        // Categories
+        Route::middleware('permission:view-categories')->group(function () {
+            Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
+        });
+        Route::middleware('permission:manage-categories')->group(function () {
+            Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
+            Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+            Route::get('/categories/{category}/edit', [CategoryController::class, 'edit'])->name('categories.edit');
+            Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+            Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+
+            // Dynamic Fields (nested under categories)
+            Route::get('/categories/{category}/fields', [DynamicFieldController::class, 'index'])->name('categories.fields.index');
+            Route::get('/categories/{category}/fields/create', [DynamicFieldController::class, 'create'])->name('categories.fields.create');
+            Route::post('/categories/{category}/fields', [DynamicFieldController::class, 'store'])->name('categories.fields.store');
+            Route::get('/categories/{category}/fields/{field}/edit', [DynamicFieldController::class, 'edit'])->name('categories.fields.edit');
+            Route::put('/categories/{category}/fields/{field}', [DynamicFieldController::class, 'update'])->name('categories.fields.update');
+            Route::delete('/categories/{category}/fields/{field}', [DynamicFieldController::class, 'destroy'])->name('categories.fields.destroy');
+        });
+
+        // Cities
+        Route::middleware('permission:view-cities')->group(function () {
+            Route::get('/cities', [CityController::class, 'index'])->name('cities.index');
+        });
+        Route::middleware('permission:manage-cities')->group(function () {
+            Route::get('/cities/create', [CityController::class, 'create'])->name('cities.create');
+            Route::post('/cities', [CityController::class, 'store'])->name('cities.store');
+            Route::get('/cities/{city}/edit', [CityController::class, 'edit'])->name('cities.edit');
+            Route::put('/cities/{city}', [CityController::class, 'update'])->name('cities.update');
+            Route::delete('/cities/{city}', [CityController::class, 'destroy'])->name('cities.destroy');
+
+            // Activity Types (reference data, same permission as cities)
+            Route::get('/activity-types', [ActivityTypeController::class, 'index'])->name('activity-types.index');
+            Route::get('/activity-types/create', [ActivityTypeController::class, 'create'])->name('activity-types.create');
+            Route::post('/activity-types', [ActivityTypeController::class, 'store'])->name('activity-types.store');
+            Route::get('/activity-types/{activityType}/edit', [ActivityTypeController::class, 'edit'])->name('activity-types.edit');
+            Route::put('/activity-types/{activityType}', [ActivityTypeController::class, 'update'])->name('activity-types.update');
+            Route::delete('/activity-types/{activityType}', [ActivityTypeController::class, 'destroy'])->name('activity-types.destroy');
+        });
+
+        // Placeholder routes for Phase 3+ (sidebar links — prevents errors)
+        Route::get('/services', fn() => redirect()->route('admin.dashboard'))->name('services.index');
+        Route::get('/sliders', fn() => redirect()->route('admin.dashboard'))->name('sliders.index');
+        Route::get('/reports', fn() => redirect()->route('admin.dashboard'))->name('reports.index');
+        Route::get('/roles', fn() => redirect()->route('admin.dashboard'))->name('roles.index');
+        Route::get('/admins', fn() => redirect()->route('admin.dashboard'))->name('admins.index');
     });
 });

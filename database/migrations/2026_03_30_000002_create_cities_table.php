@@ -10,8 +10,7 @@ return new class extends Migration
     {
         Schema::create('cities', function (Blueprint $table) {
             $table->id();
-            $table->string('name_ar');
-            $table->string('name_en');
+            $table->json('name'); // {"ar": "دمشق", "en": "Damascus"}
             $table->timestamps();
         });
     }

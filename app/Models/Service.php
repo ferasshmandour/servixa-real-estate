@@ -5,17 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Translatable\HasTranslations;
 
 class Service extends Model
 {
+    use HasTranslations;
+
     protected $fillable = [
         'business_account_id',
         'category_id',
         'subcategory_id',
-        'title_ar',
-        'title_en',
-        'description_ar',
-        'description_en',
+        'title',
+        'description',
         'available_quantity',
         'main_image',
         'type',
@@ -26,6 +27,8 @@ class Service extends Model
         'status',
         'rejection_reason',
     ];
+
+    public $translatable = ['title', 'description'];
 
     protected function casts(): array
     {

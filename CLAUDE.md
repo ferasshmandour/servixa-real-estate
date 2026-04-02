@@ -58,6 +58,7 @@ php artisan test --filter TestClassName
 ```bash
 composer require laravel/passport
 composer require spatie/laravel-permission
+composer require spatie/laravel-translatable
 composer require intervention/image
 composer require kreait/laravel-firebase
 composer require pusher/pusher-php-server
@@ -119,7 +120,7 @@ app/
 ├── Services/
 │   ├── OtpService.php            ← UltraMsg WhatsApp OTP logic
 │   ├── NotificationService.php   ← Firebase push notifications
-│   └── ChatService.php           ← Pusher real-time chat
+│   └── ChatService.php           ← Pusher private channel chat (1-to-1)
 └── Http/Resources/               ← API JSON transformers
 
 resources/views/admin/            ← ALL Blade templates (admin only)
@@ -295,7 +296,7 @@ public function store(StoreServiceRequest $request, ServiceService $serviceServi
 | `services` | `status` ENUM: `pending`, `approved`, `rejected` |
 | `orders` | `status` ENUM: `pending`, `accepted`, `rejected` |
 
-- Bilingual columns use `_ar` / `_en` suffix: `name_ar`, `name_en`, `title_ar`, `title_en`, etc.
+- Bilingual columns use **JSON** type via `spatie/laravel-translatable` (e.g. `name JSON`, `title JSON`, `description JSON`) — NOT `_ar`/`_en` suffixes
 - Images stored in `storage/app/public` → exposed via `php artisan storage:link`
 - OTPs stored in **cache only**, NOT in database
 
@@ -372,16 +373,28 @@ GET    /api/v1/services/{id}            [public]
 |---|---|---|---|
 | WhatsApp OTP | UltraMsg | Send OTP via WhatsApp | `ULTRAMSG_INSTANCE_ID`, `ULTRAMSG_TOKEN` |
 | Push Notifications | Firebase FCM | Push alerts to mobile devices | `FIREBASE_CREDENTIALS` (path to JSON file) |
-| Real-time Chat | Pusher | WebSocket broadcast for chat | `PUSHER_APP_ID`, `PUSHER_APP_KEY`, `PUSHER_APP_SECRET`, `PUSHER_APP_CLUSTER` |
+| Real-time Chat | Pusher | **Private channel** chat (1-to-1 only, NOT public channels) | `PUSHER_APP_ID`, `PUSHER_APP_KEY`, `PUSHER_APP_SECRET`, `PUSHER_APP_CLUSTER` |
 | Maps | Google Maps embed | Location display (no backend key) | None |
 
 ---
 
-## Bilingual Support
+## Bilingual Support — `spatie/laravel-translatable`
 
 - Default locale: Arabic (`APP_LOCALE=ar`)
 - Supported: `ar`, `en`
-- All DB content has `_ar` and `_en` columns
+- **Uses `spatie/laravel-translatable`** — translatable columns stored as JSON, NOT separate `_ar`/`_en` columns
+- Models use `HasTranslations` trait, declare `$translatable` array:
+```php
+use Spatie\Translatable\HasTranslations;
+
+class Category extends Model
+{
+    use HasTranslations;
+    public $translatable = ['name'];
+}
+```
+- Database columns for translatable fields are `JSON` type (e.g. `name JSON` stores `{"ar": "معدات", "en": "Equipment"}`)
+- Access: `$category->name` returns the value in current locale; `$category->getTranslation('name', 'en')` for specific locale
 - Locale set per-request via `SetLocale` middleware (reads from request header `Accept-Language`)
 - Lang files in `lang/ar/` and `lang/en/`
 

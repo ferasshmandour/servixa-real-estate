@@ -350,10 +350,10 @@ Servixa is a regulated digital marketplace for real estate and construction-rela
 | API Authentication | Laravel Passport (OAuth2 — Password Grant) |
 | Admin Auth | Laravel Session Auth |
 | Roles & Permissions | `spatie/laravel-permission` |
-| Bilingual Support | Laravel built-in localization (AR / EN) |
+| Bilingual Support | `spatie/laravel-translatable` — JSON columns, locale-aware access |
 | WhatsApp OTP | UltraMsg API via `Http::post()` |
 | Push Notifications | Firebase (`kreait/laravel-firebase`) |
-| Real-Time Chat | Pusher (`pusher/pusher-php-server`) |
+| Real-Time Chat | Pusher (`pusher/pusher-php-server`) — **private channels only** (1-to-1 chat) |
 | Image Handling | `intervention/image` |
 | Admin UI | Laravel Blade + Tailwind CSS |
 

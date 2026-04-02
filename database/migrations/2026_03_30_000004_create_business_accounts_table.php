@@ -14,10 +14,9 @@ return new class extends Migration
             $table->foreignId('activity_type_id')->constrained();
             $table->foreignId('city_id')->constrained();
             $table->string('license_number');
-            $table->string('name_ar');
-            $table->string('name_en');
-            $table->text('activities');
-            $table->text('details');
+            $table->json('name');       // translatable
+            $table->json('activities'); // translatable
+            $table->json('details');    // translatable
             $table->text('address')->nullable();
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();

@@ -5,16 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Translatable\HasTranslations;
 
 class BusinessAccount extends Model
 {
+    use HasTranslations;
+
     protected $fillable = [
         'user_id',
         'activity_type_id',
         'city_id',
         'license_number',
-        'name_ar',
-        'name_en',
+        'name',
         'activities',
         'details',
         'address',
@@ -23,6 +25,8 @@ class BusinessAccount extends Model
         'status',
         'rejection_reason',
     ];
+
+    public $translatable = ['name', 'activities', 'details'];
 
     protected function casts(): array
     {
