@@ -79,14 +79,14 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <x-input
                     name="icon"
-                    label="Icon (emoji or slug)"
+                    :label="__('admin.cat_icon')"
                     placeholder="e.g. 🏗️ or construction"
                     :value="old('icon')"
                 />
                 <x-input
                     name="sort_order"
                     type="number"
-                    label="Sort Order"
+                    :label="__('admin.label_sort_order')"
                     placeholder="0"
                     :value="old('sort_order', 0)"
                 />
@@ -94,8 +94,8 @@
 
             {{-- Actions --}}
             <div class="flex items-center justify-end gap-3 pt-2 border-t border-[#F5F3FF]">
-                <x-button variant="ghost" href="{{ route('admin.categories.index') }}">Cancel</x-button>
-                <x-button variant="primary" type="submit">Create Category</x-button>
+                <x-button variant="ghost" href="{{ route('admin.categories.index') }}">{{ __('admin.action_cancel') }}</x-button>
+                <x-button variant="primary" type="submit">{{ __('admin.cat_create_btn') }}</x-button>
             </div>
         </form>
     </x-card>

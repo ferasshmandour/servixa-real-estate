@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Business Accounts — Servixa Admin')
+@section('title', __('admin.ba_title') . ' — Servixa Admin')
 
 @section('breadcrumb')
     <span class="text-[#6B7280]">Admin</span>
     <svg class="w-4 h-4 text-[#6B7280] rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-    <span class="text-[#1F2937] font-medium">Business Accounts</span>
+    <span class="text-[#1F2937] font-medium">{{ __('admin.ba_title') }}</span>
 @endsection
 
 @section('content')
@@ -13,14 +13,14 @@
 {{-- Page Header --}}
 <div class="flex items-center justify-between mb-6">
     <div>
-        <h1 class="text-2xl font-bold text-[#1F2937]">Business Accounts</h1>
-        <p class="text-sm text-[#6B7280] mt-1">Review and manage submitted business accounts</p>
+        <h1 class="text-2xl font-bold text-[#1F2937]">{{ __('admin.ba_title') }}</h1>
+        <p class="text-sm text-[#6B7280] mt-1">{{ __('admin.ba_subtitle') }}</p>
     </div>
 </div>
 
 {{-- Status Filter Tabs --}}
 <div class="flex gap-1 mb-0 border-b border-[#DDD6FE]">
-    @foreach(['all' => 'All', 'pending' => 'Pending', 'approved' => 'Approved', 'rejected' => 'Rejected'] as $value => $label)
+    @foreach(['all' => __('admin.ba_tab_all'), 'pending' => __('admin.ba_tab_pending'), 'approved' => __('admin.ba_tab_approved'), 'rejected' => __('admin.ba_tab_rejected')] as $value => $label)
         @php $isActive = request('status', 'all') === $value; @endphp
         <a href="{{ request()->fullUrlWithQuery(['status' => $value, 'page' => 1]) }}"
            class="px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 transition-colors
@@ -45,21 +45,21 @@
                     type="text"
                     name="search"
                     value="{{ request('search') }}"
-                    placeholder="Search by license number..."
+                    placeholder="{{ __('admin.label_search') }}"
                     class="ps-9 pe-4 py-2 text-sm border border-[#DDD6FE] rounded-lg bg-white text-[#1F2937] placeholder-[#6B7280] focus:outline-none focus:ring-2 focus:ring-[#6B21A8]/30 focus:border-[#6B21A8] transition w-64"
                 >
             </div>
-            <x-button variant="primary" size="sm" type="submit">Search</x-button>
+            <x-button variant="primary" size="sm" type="submit">{{ __('admin.action_search') }}</x-button>
             @if(request('search'))
-                <x-button variant="ghost" size="sm" href="{{ request()->fullUrlWithQuery(['search' => null]) }}">Clear</x-button>
+                <x-button variant="ghost" size="sm" href="{{ request()->fullUrlWithQuery(['search' => null]) }}">{{ __('admin.action_clear') }}</x-button>
             @endif
         </form>
     </x-slot>
 
     @if($accounts->isEmpty())
-        <x-empty-state message="No business accounts found." />
+        <x-empty-state :message="__('admin.ba_empty')" />
     @else
-        <x-data-table :headers="['Account', 'Owner', 'City', 'Activity Type', 'License #', 'Status', 'Date', '']">
+        <x-data-table :headers="[__('admin.ba_col_business'), __('admin.ba_col_owner'), __('admin.ba_col_city'), __('admin.ba_col_type'), 'License #', __('admin.label_status'), __('admin.ba_col_submitted'), '']">
             @foreach($accounts as $account)
             <tr class="hover:bg-[#F8F7FF] transition-colors">
                 <td class="px-4 py-3">
@@ -79,7 +79,7 @@
                 </td>
                 <td class="px-4 py-3">
                     <x-button variant="secondary" size="sm" :href="route('admin.business-accounts.show', $account)">
-                        Review
+                        {{ __('admin.ba_review') }}
                     </x-button>
                 </td>
             </tr>

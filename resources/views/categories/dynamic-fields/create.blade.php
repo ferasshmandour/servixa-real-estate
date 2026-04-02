@@ -1,22 +1,22 @@
 @extends('layouts.app')
 
-@section('title', 'Add Dynamic Field — Servixa Admin')
+@section('title', __('admin.field_add_title') . ' — Servixa Admin')
 
 @section('breadcrumb')
-    <a href="{{ route('admin.categories.index') }}" class="text-[#6B7280] hover:text-[#6B21A8] transition-colors">Categories</a>
+    <a href="{{ route('admin.categories.index') }}" class="text-[#6B7280] hover:text-[#6B21A8] transition-colors">{{ __('admin.cat_title') }}</a>
     <svg class="w-4 h-4 text-[#6B7280] rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
     <a href="{{ route('admin.categories.fields.index', $category) }}" class="text-[#6B7280] hover:text-[#6B21A8] transition-colors">{{ $category->name }}</a>
     <svg class="w-4 h-4 text-[#6B7280] rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-    <span class="text-[#1F2937] font-medium">Add Field</span>
+    <span class="text-[#1F2937] font-medium">{{ __('admin.field_add') }}</span>
 @endsection
 
 @section('content')
 
 <div class="max-w-2xl">
     <div class="mb-6">
-        <h1 class="text-2xl font-bold text-[#1F2937]">Add Dynamic Field</h1>
+        <h1 class="text-2xl font-bold text-[#1F2937]">{{ __('admin.field_add_title') }}</h1>
         <p class="text-sm text-[#6B7280] mt-1">
-            Add a custom field for <span class="font-medium text-[#6B21A8]">{{ $category->name }}</span>
+            {{ __('admin.field_add_subtitle') }} <span class="font-medium text-[#6B21A8]">{{ $category->name }}</span>
         </p>
     </div>
 
@@ -27,16 +27,16 @@
 
             {{-- Bilingual Label --}}
             <div>
-                <p class="text-sm font-medium text-[#1F2937] mb-3">Field Label</p>
+                <p class="text-sm font-medium text-[#1F2937] mb-3">{{ __('admin.field_col_label') }}</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <x-input
                         name="label_en"
-                        label="English Label"
+                        :label="__('admin.field_label_en')"
                         placeholder="e.g. Floor Area"
                         :value="old('label_en')"
                     />
                     <div>
-                        <label class="block text-sm font-medium text-[#1F2937] mb-1.5">Arabic Label</label>
+                        <label class="block text-sm font-medium text-[#1F2937] mb-1.5">{{ __('admin.field_label_ar') }}</label>
                         <input
                             type="text"
                             name="label_ar"
@@ -55,7 +55,7 @@
 
             {{-- Field Type --}}
             <div>
-                <label class="block text-sm font-medium text-[#1F2937] mb-1.5">Field Type</label>
+                <label class="block text-sm font-medium text-[#1F2937] mb-1.5">{{ __('admin.field_type_label') }}</label>
                 <select
                     name="field_type"
                     x-model="fieldType"
@@ -72,11 +72,10 @@
                 @enderror
             </div>
 
-            {{-- Select Options (only shown when type = select) --}}
+            {{-- Select Options --}}
             <div x-show="fieldType === 'select'" x-cloak>
                 <label class="block text-sm font-medium text-[#1F2937] mb-1.5">
-                    Options
-                    <span class="text-[#6B7280] font-normal">(one per line)</span>
+                    {{ __('admin.field_options_label') }}
                 </label>
                 <textarea
                     name="options_raw"
@@ -101,15 +100,14 @@
                             class="w-4 h-4 rounded border-[#DDD6FE] text-[#6B21A8] focus:ring-[#6B21A8]"
                         >
                         <div>
-                            <span class="text-sm font-medium text-[#1F2937]">Required</span>
-                            <p class="text-xs text-[#6B7280]">Field must be filled</p>
+                            <span class="text-sm font-medium text-[#1F2937]">{{ __('admin.field_required_label') }}</span>
                         </div>
                     </label>
                 </div>
                 <x-input
                     name="sort_order"
                     type="number"
-                    label="Sort Order"
+                    :label="__('admin.label_sort_order')"
                     placeholder="0"
                     :value="old('sort_order', 0)"
                 />
@@ -117,8 +115,8 @@
 
             {{-- Actions --}}
             <div class="flex items-center justify-end gap-3 pt-2 border-t border-[#F5F3FF]">
-                <x-button variant="ghost" :href="route('admin.categories.fields.index', $category)">Cancel</x-button>
-                <x-button variant="primary" type="submit">Add Field</x-button>
+                <x-button variant="ghost" :href="route('admin.categories.fields.index', $category)">{{ __('admin.action_cancel') }}</x-button>
+                <x-button variant="primary" type="submit">{{ __('admin.field_add') }}</x-button>
             </div>
         </form>
     </x-card>

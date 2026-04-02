@@ -14,6 +14,7 @@ class CategoryResource extends JsonResource
             'name'           => $this->name,
             'icon'           => $this->icon,
             'sort_order'     => $this->sort_order,
+            'dynamic_fields' => DynamicFieldResource::collection($this->whenLoaded('dynamicFields')),
             'subcategories'  => CategoryResource::collection($this->whenLoaded('children')),
         ];
     }

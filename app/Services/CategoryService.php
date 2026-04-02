@@ -23,7 +23,7 @@ class CategoryService
         $category = new Category();
         $category->setTranslation('name', 'ar', $data['name_ar'])
                  ->setTranslation('name', 'en', $data['name_en']);
-        $category->parent_id   = $data['parent_id'] ?? null;
+        $category->parent_id   = !empty($data['parent_id']) ? $data['parent_id'] : null;
         $category->icon        = $data['icon'] ?? null;
         $category->sort_order  = $data['sort_order'] ?? 0;
         $category->save();
@@ -35,7 +35,7 @@ class CategoryService
     {
         $category->setTranslation('name', 'ar', $data['name_ar'])
                   ->setTranslation('name', 'en', $data['name_en']);
-        $category->parent_id   = $data['parent_id'] ?? null;
+        $category->parent_id   = !empty($data['parent_id']) ? $data['parent_id'] : null;
         $category->icon        = $data['icon'] ?? null;
         $category->sort_order  = $data['sort_order'] ?? 0;
         $category->save();
@@ -96,7 +96,11 @@ class CategoryService
     public function allWithSubcategories(): Collection
     {
         return Category::whereNull('parent_id')
-            ->with('children')
+            ->with([
+                'dynamicFields' => fn($q) => $q->orderBy('sort_order'),
+                'children'      => fn($q) => $q->orderBy('sort_order'),
+                'children.dynamicFields' => fn($q) => $q->orderBy('sort_order'),
+            ])
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();

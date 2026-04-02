@@ -1,12 +1,14 @@
 <?php
 
 use App\Http\Controllers\Admin\ActivityTypeController;
+use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\BusinessAccountController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DynamicFieldController;
+use App\Http\Controllers\Admin\RoleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -85,7 +87,25 @@ Route::prefix('admin')->group(function () {
         Route::get('/services', fn() => redirect()->route('admin.dashboard'))->name('services.index');
         Route::get('/sliders', fn() => redirect()->route('admin.dashboard'))->name('sliders.index');
         Route::get('/reports', fn() => redirect()->route('admin.dashboard'))->name('reports.index');
-        Route::get('/roles', fn() => redirect()->route('admin.dashboard'))->name('roles.index');
-        Route::get('/admins', fn() => redirect()->route('admin.dashboard'))->name('admins.index');
+
+        // Roles (Super Admin only)
+        Route::middleware('permission:manage-roles')->group(function () {
+            Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
+            Route::get('/roles/create', [RoleController::class, 'create'])->name('roles.create');
+            Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
+            Route::get('/roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit');
+            Route::put('/roles/{role}', [RoleController::class, 'update'])->name('roles.update');
+            Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
+        });
+
+        // Admin Users (Super Admin only)
+        Route::middleware('permission:manage-admins')->group(function () {
+            Route::get('/admins', [AdminUserController::class, 'index'])->name('admins.index');
+            Route::get('/admins/create', [AdminUserController::class, 'create'])->name('admins.create');
+            Route::post('/admins', [AdminUserController::class, 'store'])->name('admins.store');
+            Route::get('/admins/{admin}/edit', [AdminUserController::class, 'edit'])->name('admins.edit');
+            Route::put('/admins/{admin}', [AdminUserController::class, 'update'])->name('admins.update');
+            Route::delete('/admins/{admin}', [AdminUserController::class, 'destroy'])->name('admins.destroy');
+        });
     });
 });
