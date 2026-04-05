@@ -15,7 +15,6 @@ class RoleController extends Controller
     public function index(): View
     {
         $roles = Role::where('guard_name', 'admin')
-            ->withCount('permissions')
             ->with('permissions')
             ->get();
 

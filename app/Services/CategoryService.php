@@ -11,7 +11,6 @@ class CategoryService
     public function listParents(): Collection
     {
         return Category::whereNull('parent_id')
-            ->withCount('children')
             ->with('children')
             ->orderBy('sort_order')
             ->orderBy('id')

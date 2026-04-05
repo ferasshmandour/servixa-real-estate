@@ -12,8 +12,8 @@ class CityService
     {
         return City::query()
             ->when($search, fn($q) => $q->where(fn($q) => $q
-                ->whereRaw("name->>'$.ar' LIKE ?", ["%{$search}%"])
-                ->orWhereRaw("name->>'$.en' LIKE ?", ["%{$search}%"])
+                ->where('name_ar', 'LIKE', "%{$search}%")
+                ->orWhere('name_en', 'LIKE', "%{$search}%")
             ))
             ->orderBy('id')
             ->paginate(15);

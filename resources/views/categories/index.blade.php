@@ -53,7 +53,7 @@
                     <td class="px-4 py-3">
                         <span class="inline-flex items-center gap-1.5 text-sm text-[#6B7280]">
                             <span class="w-5 h-5 rounded-full bg-[#F5F3FF] text-[#6B21A8] text-xs font-bold flex items-center justify-center">
-                                {{ $category->children_count }}
+                                {{ $category->children->count() }}
                             </span>
                             {{ __('admin.cat_subcategories_count') }}
                         </span>

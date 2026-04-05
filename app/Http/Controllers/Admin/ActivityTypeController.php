@@ -18,7 +18,6 @@ class ActivityTypeController extends Controller
     public function index(Request $request): View
     {
         $activityTypes = $this->service->list($request->get('search'));
-
         return view('activity-types.index', compact('activityTypes'));
     }
 

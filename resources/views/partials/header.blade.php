@@ -42,9 +42,9 @@
                 x-on:click.outside="open = false"
                 class="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-[#F5F3FF] transition-colors"
             >
-                <x-avatar :name="auth('admin')->user()?->name ?? 'Admin'" size="sm" />
+                <x-avatar :name="$adminUser?->name ?? 'Admin'" size="sm" />
                 <div class="text-start hidden sm:block">
-                    <p class="text-sm font-medium text-[#1F2937]">{{ auth('admin')->user()?->name ?? 'Admin' }}</p>
+                    <p class="text-sm font-medium text-[#1F2937]">{{ $adminUser?->name ?? 'Admin' }}</p>
                     <p class="text-xs text-[#6B7280]">{{ __('admin.nav_administrator') }}</p>
                 </div>
                 <svg class="w-4 h-4 text-[#6B7280] transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24">

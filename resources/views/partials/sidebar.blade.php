@@ -92,7 +92,7 @@
         @endforeach
 
         {{-- Super Admin section --}}
-        @if (auth('admin')->check() && auth('admin')->user()->hasRole('super-admin'))
+        @if ($isSuperAdmin)
             <div class="pt-4 pb-1 px-3">
                 <p class="text-xs font-semibold text-white/40 uppercase tracking-wider">{{ __('admin.nav_super_admin') }}</p>
             </div>
@@ -124,10 +124,10 @@
     {{-- Admin info at bottom --}}
     <div class="px-4 py-4 border-t border-white/10">
         <div class="flex items-center gap-3">
-            <x-avatar :name="auth('admin')->user()?->name ?? 'Admin'" size="sm" />
+            <x-avatar :name="$adminUser?->name ?? 'Admin'" size="sm" />
             <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-white truncate">{{ auth('admin')->user()?->name ?? 'Admin' }}</p>
-                <p class="text-xs text-white/50 truncate">{{ auth('admin')->user()?->email ?? '' }}</p>
+                <p class="text-sm font-medium text-white truncate">{{ $adminUser?->name ?? 'Admin' }}</p>
+                <p class="text-xs text-white/50 truncate">{{ $adminUser?->email ?? '' }}</p>
             </div>
         </div>
     </div>

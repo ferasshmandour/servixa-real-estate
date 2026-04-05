@@ -15,6 +15,7 @@ Route::get('/', function () {
     return redirect()->route('admin.login');
 });
 
+
 Route::get('/locale/{lang}', function (string $lang) {
     if (in_array($lang, ['en', 'ar'])) {
         session(['locale' => $lang]);

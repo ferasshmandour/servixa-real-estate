@@ -14,7 +14,6 @@ class ActivityTypeController extends Controller
     public function index(): JsonResponse
     {
         $activityTypes = $this->service->allForApi();
-
         return $this->success(ActivityTypeResource::collection($activityTypes));
     }
 }
