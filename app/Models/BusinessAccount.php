@@ -5,11 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
 
-class BusinessAccount extends Model
+class BusinessAccount extends Model implements HasMedia
 {
-    use HasTranslations;
+    use HasTranslations, InteractsWithMedia;
 
     protected $fillable = [
         'user_id',
@@ -51,9 +53,10 @@ class BusinessAccount extends Model
         return $this->belongsTo(City::class);
     }
 
-    public function files(): HasMany
+    public function registerMediaCollections(): void
     {
-        return $this->hasMany(BusinessAccountFile::class);
+        $this->addMediaCollection('images');
+        $this->addMediaCollection('documents');
     }
 
     public function services(): HasMany

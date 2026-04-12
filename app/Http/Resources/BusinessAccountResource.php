@@ -22,7 +22,20 @@ class BusinessAccountResource extends JsonResource
             'rejection_reason' => $this->when($this->status === 'rejected', $this->rejection_reason),
             'city'             => new CityResource($this->whenLoaded('city')),
             'activity_type'    => new ActivityTypeResource($this->whenLoaded('activityType')),
-            'files'            => BusinessAccountFileResource::collection($this->whenLoaded('files')),
+            'files'            => [
+                'images'    => $this->getMedia('images')->map(fn($m) => [
+                    'id'   => $m->id,
+                    'url'  => $m->getUrl(),
+                    'name' => $m->file_name,
+                    'type' => 'image',
+                ]),
+                'documents' => $this->getMedia('documents')->map(fn($m) => [
+                    'id'   => $m->id,
+                    'url'  => $m->getUrl(),
+                    'name' => $m->file_name,
+                    'type' => 'document',
+                ]),
+            ],
             'created_at'       => $this->created_at->toIso8601String(),
         ];
     }

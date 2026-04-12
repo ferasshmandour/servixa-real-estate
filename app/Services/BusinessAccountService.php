@@ -42,7 +42,7 @@ class BusinessAccountService
     public function listForUser(User $user): LengthAwarePaginator
     {
         return $user->businessAccounts()
-            ->with(['city', 'activityType', 'files'])
+            ->with(['city', 'activityType'])
             ->latest()
             ->paginate(10);
     }
@@ -70,7 +70,7 @@ class BusinessAccountService
             $this->storeFiles($account, $data['files']);
         }
 
-        return $account->load(['city', 'activityType', 'files']);
+        return $account->load(['city', 'activityType']);
     }
 
     public function update(User $user, BusinessAccount $account, array $data): BusinessAccount
@@ -106,11 +106,12 @@ class BusinessAccountService
         $account->longitude = $data['longitude'] ?? $account->longitude;
         $account->save();
 
+        // Append new files (images → 'images' collection, documents → 'documents' collection)
         if (!empty($data['files'])) {
             $this->storeFiles($account, $data['files']);
         }
 
-        return $account->load(['city', 'activityType', 'files']);
+        return $account->load(['city', 'activityType']);
     }
 
     // ─── Private ──────────────────────────────────────────────────────────────
@@ -118,13 +119,10 @@ class BusinessAccountService
     private function storeFiles(BusinessAccount $account, array $files): void
     {
         foreach ($files as $file) {
-            $path = $file->store('business-accounts/' . $account->id, 'public');
-            $type = str_contains($file->getMimeType(), 'image') ? 'image' : 'document';
+            $collection = str_contains($file->getMimeType(), 'image') ? 'images' : 'documents';
 
-            $account->files()->create([
-                'file_path' => $path,
-                'file_type' => $type,
-            ]);
+            $account->addMedia($file)
+                    ->toMediaCollection($collection);
         }
     }
 }

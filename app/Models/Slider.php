@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Slider extends Model
+class Slider extends Model implements HasMedia
 {
+    use InteractsWithMedia;
+
     protected $fillable = [
-        'image',
         'link',
         'sort_order',
         'is_active',
@@ -18,5 +21,10 @@ class Slider extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('image')->singleFile();
     }
 }

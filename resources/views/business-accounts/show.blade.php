@@ -149,31 +149,35 @@
         </x-card>
 
         {{-- Files & Documents --}}
-        @if($businessAccount->files->isNotEmpty())
+        @php
+            $accountImages    = $businessAccount->getMedia('images');
+            $accountDocuments = $businessAccount->getMedia('documents');
+            $hasFiles         = $accountImages->isNotEmpty() || $accountDocuments->isNotEmpty();
+        @endphp
+        @if($hasFiles)
             <x-card title="Supporting Documents">
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    @foreach($businessAccount->files as $file)
-                        @if($file->file_type === 'image')
-                            <a href="{{ Storage::url($file->file_path) }}" target="_blank"
-                               class="block rounded-xl overflow-hidden border border-[#DDD6FE] hover:border-[#6B21A8] transition-colors group relative">
-                                <img src="{{ Storage::url($file->file_path) }}"
-                                     alt="Account image"
-                                     class="w-full h-32 object-cover group-hover:opacity-90 transition-opacity">
-                                <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-[#6B21A8]/20 transition-opacity">
-                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                                    </svg>
-                                </div>
-                            </a>
-                        @else
-                            <a href="{{ Storage::url($file->file_path) }}" target="_blank"
-                               class="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-[#DDD6FE] hover:border-[#6B21A8] hover:bg-[#F5F3FF] transition-colors group">
-                                <svg class="w-10 h-10 text-[#6B7280] group-hover:text-[#6B21A8] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    @foreach($accountImages as $media)
+                        <a href="{{ $media->getUrl() }}" target="_blank"
+                           class="block rounded-xl overflow-hidden border border-[#DDD6FE] hover:border-[#6B21A8] transition-colors group relative">
+                            <img src="{{ $media->getUrl() }}"
+                                 alt="Account image"
+                                 class="w-full h-32 object-cover group-hover:opacity-90 transition-opacity">
+                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-[#6B21A8]/20 transition-opacity">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                                 </svg>
-                                <span class="text-xs text-[#6B7280] group-hover:text-[#6B21A8] transition-colors font-medium">Document</span>
-                            </a>
-                        @endif
+                            </div>
+                        </a>
+                    @endforeach
+                    @foreach($accountDocuments as $media)
+                        <a href="{{ $media->getUrl() }}" target="_blank"
+                           class="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-[#DDD6FE] hover:border-[#6B21A8] hover:bg-[#F5F3FF] transition-colors group">
+                            <svg class="w-10 h-10 text-[#6B7280] group-hover:text-[#6B21A8] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <span class="text-xs text-[#6B7280] group-hover:text-[#6B21A8] transition-colors font-medium truncate w-full text-center">{{ $media->file_name }}</span>
+                        </a>
                     @endforeach
                 </div>
             </x-card>
@@ -231,7 +235,7 @@
                 </div>
                 <div class="flex justify-between">
                     <dt class="text-[#6B7280]">Files</dt>
-                    <dd class="font-medium text-[#1F2937]">{{ $businessAccount->files->count() }}</dd>
+                    <dd class="font-medium text-[#1F2937]">{{ $businessAccount->getMedia('images')->count() + $businessAccount->getMedia('documents')->count() }}</dd>
                 </div>
             </dl>
         </x-card>

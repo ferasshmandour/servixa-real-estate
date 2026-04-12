@@ -5,11 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Translatable\HasTranslations;
 
-class Service extends Model
+class Service extends Model implements HasMedia
 {
-    use HasTranslations;
+    use HasTranslations, InteractsWithMedia;
 
     protected $fillable = [
         'business_account_id',
@@ -18,23 +20,29 @@ class Service extends Model
         'title',
         'description',
         'available_quantity',
-        'main_image',
         'type',
-        'price',
-        'currency',
+        'price_syp',
+        'price_usd',
         'latitude',
         'longitude',
         'status',
         'rejection_reason',
     ];
 
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('main-image')->singleFile();
+        $this->addMediaCollection('additional-images');
+    }
+
     public $translatable = ['title', 'description'];
 
     protected function casts(): array
     {
         return [
-            'price' => 'decimal:2',
-            'latitude' => 'decimal:7',
+            'price_syp' => 'decimal:2',
+            'price_usd' => 'decimal:2',
+            'latitude'  => 'decimal:7',
             'longitude' => 'decimal:7',
         ];
     }
@@ -52,11 +60,6 @@ class Service extends Model
     public function subcategory(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'subcategory_id');
-    }
-
-    public function images(): HasMany
-    {
-        return $this->hasMany(ServiceImage::class);
     }
 
     public function dynamicValues(): HasMany

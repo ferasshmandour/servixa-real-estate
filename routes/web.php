@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DynamicFieldController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\ServiceController;
+use App\Http\Controllers\Admin\SliderController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -84,9 +86,27 @@ Route::prefix('admin')->group(function () {
             Route::delete('/activity-types/{activityType}', [ActivityTypeController::class, 'destroy'])->name('activity-types.destroy');
         });
 
-        // Placeholder routes for Phase 3+ (sidebar links — prevents errors)
-        Route::get('/services', fn() => redirect()->route('admin.dashboard'))->name('services.index');
-        Route::get('/sliders', fn() => redirect()->route('admin.dashboard'))->name('sliders.index');
+        // Services
+        Route::middleware('permission:view-services')->group(function () {
+            Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
+            Route::get('/services/{service}', [ServiceController::class, 'show'])->name('services.show');
+        });
+        Route::middleware('permission:manage-services')->group(function () {
+            Route::post('/services/{service}/approve', [ServiceController::class, 'approve'])->name('services.approve');
+            Route::post('/services/{service}/reject', [ServiceController::class, 'reject'])->name('services.reject');
+        });
+
+        // Sliders
+        Route::middleware('permission:manage-sliders')->group(function () {
+            Route::get('/sliders', [SliderController::class, 'index'])->name('sliders.index');
+            Route::get('/sliders/create', [SliderController::class, 'create'])->name('sliders.create');
+            Route::post('/sliders', [SliderController::class, 'store'])->name('sliders.store');
+            Route::get('/sliders/{slider}/edit', [SliderController::class, 'edit'])->name('sliders.edit');
+            Route::put('/sliders/{slider}', [SliderController::class, 'update'])->name('sliders.update');
+            Route::delete('/sliders/{slider}', [SliderController::class, 'destroy'])->name('sliders.destroy');
+        });
+
+        // Placeholder routes for Phase 6+ (sidebar links — prevents errors)
         Route::get('/reports', fn() => redirect()->route('admin.dashboard'))->name('reports.index');
 
         // Roles (Super Admin only)
