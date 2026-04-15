@@ -26,13 +26,20 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->route('admin.dashboard');
+        // Carry _tab through the redirect so the dashboard request also has it,
+        // letting the TabAwareSessionGuard find the freshly-stored session key.
+        $tab = substr(preg_replace('/[^a-zA-Z0-9\-]/', '', $request->input('_tab', '')), 0, 40);
+
+        return redirect()->route('admin.dashboard', $tab ? ['_tab' => $tab] : []);
     }
 
     public function logout(Request $request)
     {
+        // Logs out only the current tab's session key — other tabs stay logged in.
         $this->adminAuthService->logout();
-        $request->session()->invalidate();
+
+        // Do NOT call session()->invalidate() here — that would wipe every tab's
+        // session data. Regenerating the CSRF token is sufficient.
         $request->session()->regenerateToken();
 
         return redirect()->route('admin.login');

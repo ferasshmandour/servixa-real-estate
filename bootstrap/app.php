@@ -26,6 +26,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \App\Http\Middleware\CheckPermission::class,
         ]);
 
+        // Automatically append _tab to every redirect response on admin routes
+        // so server-side redirects (after store/update/destroy) carry the tab ID forward.
+        $middleware->appendToGroup('web', \App\Http\Middleware\InjectTabId::class);
+
         $middleware->redirectGuestsTo(fn (Request $request) => route('admin.login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {

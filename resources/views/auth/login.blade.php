@@ -583,5 +583,28 @@
 
     </main>
 </div>
+<script>
+    // Generate a unique tab ID once per tab and store it in sessionStorage.
+    // sessionStorage is isolated per-tab, so each browser tab gets its own ID.
+    (function () {
+        if (!sessionStorage.getItem('_tab')) {
+            sessionStorage.setItem('_tab',
+                Math.random().toString(36).slice(2, 11) +
+                Math.random().toString(36).slice(2, 11)
+            );
+        }
+        var tabId = sessionStorage.getItem('_tab');
+
+        // Inject _tab as a hidden field into the login form before it is submitted.
+        var form = document.querySelector('form');
+        if (form) {
+            var input = document.createElement('input');
+            input.type  = 'hidden';
+            input.name  = '_tab';
+            input.value = tabId;
+            form.appendChild(input);
+        }
+    })();
+</script>
 </body>
 </html>

@@ -48,5 +48,86 @@
     </div>
 
     @stack('scripts')
+
+    {{--
+        Tab-Aware Session Manager
+        ─────────────────────────
+        Every browser tab has its own sessionStorage. On first load this script
+        generates a unique `_tab` identifier and stores it there. Every
+        subsequent page load reads the same value, giving each tab a stable ID.
+
+        The server-side TabAwareSessionGuard namespaces the session key with
+        this ID, so Tab A and Tab B can be logged in as different admin accounts
+        at the same time without overwriting each other.
+    --}}
+    <script>
+    (function () {
+        // ── 1. Establish the tab ID ────────────────────────────────────────────
+        var url    = new URL(window.location.href);
+        var urlTab = url.searchParams.get('_tab');
+
+        if (urlTab) {
+            // URL already carries a tab ID (came from a link/redirect).
+            // Sync it into sessionStorage so link/form injectors use the same value.
+            sessionStorage.setItem('_tab', urlTab);
+        } else {
+            // No _tab in URL — generate one if this is a fresh tab, then redirect.
+            if (!sessionStorage.getItem('_tab')) {
+                sessionStorage.setItem('_tab',
+                    Math.random().toString(36).slice(2, 11) +
+                    Math.random().toString(36).slice(2, 11)
+                );
+            }
+            url.searchParams.set('_tab', sessionStorage.getItem('_tab'));
+            // replace() avoids adding an extra history entry for this silent redirect.
+            window.location.replace(url.toString());
+            return; // Stop — page will reload immediately with _tab in the URL.
+        }
+
+        var tabId = sessionStorage.getItem('_tab');
+
+        // ── 2. Intercept form submissions ──────────────────────────────────────
+        // Uses event delegation so Alpine.js-generated forms are also covered.
+        document.addEventListener('submit', function (e) {
+            var form = e.target;
+            if (!form.querySelector('input[name="_tab"]')) {
+                var input = document.createElement('input');
+                input.type  = 'hidden';
+                input.name  = '_tab';
+                input.value = tabId;
+                form.appendChild(input);
+            }
+        }, true);
+
+        // ── 3. Intercept link clicks ───────────────────────────────────────────
+        // Rewrites same-origin hrefs to include _tab before navigation.
+        document.addEventListener('click', function (e) {
+            var link = e.target.closest('a[href]');
+            if (!link) return;
+
+            var href = link.getAttribute('href');
+            if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+
+            try {
+                var dest = new URL(link.href, window.location.origin);
+                // Skip external links and links that already have _tab.
+                if (dest.origin !== window.location.origin) return;
+                if (dest.searchParams.get('_tab')) return;
+
+                e.preventDefault();
+                dest.searchParams.set('_tab', tabId);
+
+                // Honour target="_blank" (open in new tab).
+                if (link.target === '_blank') {
+                    window.open(dest.toString(), '_blank');
+                } else {
+                    window.location.href = dest.toString();
+                }
+            } catch (_) {
+                // Malformed href — let the browser handle it naturally.
+            }
+        });
+    })();
+    </script>
 </body>
 </html>
