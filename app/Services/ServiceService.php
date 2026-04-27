@@ -73,7 +73,12 @@ class ServiceService
             )
             ->when(
                 isset($filters['search']),
-                fn($q) => $q->whereRaw("JSON_SEARCH(LOWER(title), 'one', LOWER(?)) IS NOT NULL", ["%{$filters['search']}%"])
+                function ($q) use ($filters) {
+                    $words = array_filter(explode(' ', $filters['search']));
+                    foreach ($words as $word) {
+                        $q->whereRaw("JSON_SEARCH(LOWER(title), 'one', LOWER(?)) IS NOT NULL", ["%{$word}%"]);
+                    }
+                }
             )
             ->latest()
             ->paginate(15);

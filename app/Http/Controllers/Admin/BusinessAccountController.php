@@ -27,7 +27,7 @@ class BusinessAccountController extends Controller
 
     public function show(BusinessAccount $businessAccount): View
     {
-        $businessAccount->load(['user', 'city', 'activityType', 'files']);
+        $businessAccount->load(['user', 'city', 'activityType', 'media']);
 
         return view('business-accounts.show', compact('businessAccount'));
     }

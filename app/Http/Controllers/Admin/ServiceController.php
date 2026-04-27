@@ -27,7 +27,7 @@ class ServiceController extends Controller
 
     public function show(Service $service): View
     {
-        $service->load(['businessAccount.user', 'category', 'subcategory', 'images', 'dynamicValues.dynamicField']);
+        $service->load(['businessAccount.user', 'category', 'subcategory', 'dynamicValues.dynamicField']);
 
         return view('services.show', compact('service'));
     }

@@ -14,7 +14,7 @@
 
 {{-- Reject Modal --}}
 <x-modal id="reject-account" title="Reject Business Account" size="md">
-    <form method="POST" action="{{ route('admin.business-accounts.reject', $businessAccount) }}">
+    <form id="reject-form" method="POST" action="{{ route('admin.business-accounts.reject', $businessAccount) }}">
         @csrf
         <p class="text-sm text-[#6B7280] mb-4">
             Please provide a clear reason for rejection. This will be visible to the account owner.
@@ -29,7 +29,7 @@
             <x-button variant="ghost" type="button" x-on:click="$dispatch('close-modal-reject-account')">
                 Cancel
             </x-button>
-            <x-button variant="danger" type="submit">
+            <x-button variant="danger" type="submit" form="reject-form">
                 Confirm Rejection
             </x-button>
         </x-slot>
@@ -47,7 +47,7 @@
     </div>
 
     {{-- Action Buttons --}}
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3" x-data>
         @if(in_array($businessAccount->status, ['pending', 'rejected']))
             <form method="POST" action="{{ route('admin.business-accounts.approve', $businessAccount) }}">
                 @csrf
@@ -68,11 +68,6 @@
         @endif
 
         @if($businessAccount->status === 'approved')
-            <form method="POST" action="{{ route('admin.business-accounts.reject', $businessAccount) }}"
-                  onsubmit="return false"
-                  x-data
-                  x-on:submit.prevent="$dispatch('open-modal-reject-account')">
-            </form>
             <x-button variant="danger" type="button" x-on:click="$dispatch('open-modal-reject-account')">
                 Revoke Approval
             </x-button>

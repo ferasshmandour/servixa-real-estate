@@ -14,7 +14,7 @@
 
 {{-- Reject Modal --}}
 <x-modal id="reject-service" title="{{ __('admin.svc_reject_title') }}" size="md">
-    <form method="POST" action="{{ route('admin.services.reject', $service) }}">
+    <form id="reject-service-form" method="POST" action="{{ route('admin.services.reject', $service) }}">
         @csrf
         <p class="text-sm text-[#6B7280] mb-4">
             Please provide a clear reason for rejection. This will be visible to the service owner.
@@ -29,7 +29,7 @@
             <x-button variant="ghost" type="button" x-on:click="$dispatch('close-modal-reject-service')">
                 {{ __('admin.action_cancel') }}
             </x-button>
-            <x-button variant="danger" type="submit">
+            <x-button variant="danger" type="submit" form="reject-service-form">
                 {{ __('admin.svc_confirm_reject') }}
             </x-button>
         </x-slot>
@@ -55,7 +55,7 @@
     </div>
 
     {{-- Action Buttons --}}
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3" x-data>
         @if(in_array($service->status, ['pending', 'rejected']))
             <form method="POST" action="{{ route('admin.services.approve', $service) }}">
                 @csrf

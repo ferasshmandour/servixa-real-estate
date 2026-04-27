@@ -38,6 +38,6 @@ Route::middleware('auth:api')->group(function () {
     // Services
     Route::get('/my-services', [ApiServiceController::class, 'myServices']);
     Route::post('/services', [ApiServiceController::class, 'store']);
-    Route::put('/services/{service}', [ApiServiceController::class, 'update']);
+    Route::match(['PUT', 'POST', 'PATCH'], '/services/{service}', [ApiServiceController::class, 'update']);
     Route::delete('/services/{service}', [ApiServiceController::class, 'destroy']);
 });

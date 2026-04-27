@@ -27,7 +27,7 @@ class StoreBusinessAccountRequest extends FormRequest
             'latitude'         => ['nullable', 'numeric', 'between:-90,90'],
             'longitude'        => ['nullable', 'numeric', 'between:-180,180'],
             'files'            => ['nullable', 'array', 'max:10'],
-            'files.*'          => ['file', 'max:10240', 'mimes:jpg,jpeg,png,pdf,doc,docx'],
+            'files.*'          => ['file', 'max:10240', 'mimetypes:image/jpeg,image/png,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip,application/octet-stream'],
         ];
     }
 }

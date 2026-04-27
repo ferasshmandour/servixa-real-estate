@@ -33,7 +33,7 @@ class BusinessAccountController extends Controller
     {
         abort_if($businessAccount->user_id !== $request->user()->id, 403, 'You do not own this business account.');
 
-        $businessAccount->load(['city', 'activityType', 'files']);
+        $businessAccount->load(['city', 'activityType', 'media']);
 
         return $this->success(new BusinessAccountResource($businessAccount));
     }
