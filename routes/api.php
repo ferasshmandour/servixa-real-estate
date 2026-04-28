@@ -5,6 +5,8 @@ use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\API\BusinessAccountController as ApiBusinessAccountController;
 use App\Http\Controllers\API\CategoryController as ApiCategoryController;
 use App\Http\Controllers\API\CityController as ApiCityController;
+use App\Http\Controllers\API\OrderController as ApiOrderController;
+use App\Http\Controllers\API\RatingController as ApiRatingController;
 use App\Http\Controllers\API\ServiceController as ApiServiceController;
 use Illuminate\Support\Facades\Route;
 
@@ -40,4 +42,14 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/services', [ApiServiceController::class, 'store']);
     Route::match(['PUT', 'POST', 'PATCH'], '/services/{service}', [ApiServiceController::class, 'update']);
     Route::delete('/services/{service}', [ApiServiceController::class, 'destroy']);
+
+    // Orders
+    Route::post('/orders', [ApiOrderController::class, 'store']);
+    Route::get('/orders/received', [ApiOrderController::class, 'received']);
+    Route::get('/orders/sent', [ApiOrderController::class, 'sent']);
+    Route::patch('/orders/{id}/status', [ApiOrderController::class, 'updateStatus']);
+    Route::delete('/orders/{id}', [ApiOrderController::class, 'destroy']);
+
+    // Ratings
+    Route::post('/ratings', [ApiRatingController::class, 'store']);
 });
