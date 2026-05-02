@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\ActivityTypeController;
+use App\Http\Controllers\Admin\AdminDeviceTokenController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AuthController as AdminAuthController;
 use App\Http\Controllers\Admin\BusinessAccountController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DynamicFieldController;
+use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\SliderController;
@@ -35,6 +37,16 @@ Route::prefix('admin')->group(function () {
 
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+        // Notifications (for every signed-in admin — no extra permission)
+        Route::get('/notifications', [AdminNotificationController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications/dropdown', [AdminNotificationController::class, 'dropdown'])->name('notifications.dropdown');
+        Route::post('/notifications/read-all', [AdminNotificationController::class, 'markAllRead'])->name('notifications.read-all');
+        Route::post('/notifications/{id}/read', [AdminNotificationController::class, 'markRead'])->name('notifications.read');
+
+        // FCM device tokens
+        Route::post('/device-tokens', [AdminDeviceTokenController::class, 'store'])->name('device-tokens.store');
+        Route::delete('/device-tokens', [AdminDeviceTokenController::class, 'destroy'])->name('device-tokens.destroy');
 
         // Business Accounts
         Route::middleware('permission:view-business-accounts')->group(function () {

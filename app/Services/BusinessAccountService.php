@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Events\BusinessAccountApproved;
+use App\Events\BusinessAccountRejected;
+use App\Events\BusinessAccountSubmitted;
 use App\Models\BusinessAccount;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -27,6 +30,8 @@ class BusinessAccountService
             'status'           => 'approved',
             'rejection_reason' => null,
         ]);
+
+        BusinessAccountApproved::dispatch($account->fresh());
     }
 
     public function reject(BusinessAccount $account, string $reason): void
@@ -35,6 +40,8 @@ class BusinessAccountService
             'status'           => 'rejected',
             'rejection_reason' => $reason,
         ]);
+
+        BusinessAccountRejected::dispatch($account->fresh());
     }
 
     // ─── API ──────────────────────────────────────────────────────────────────
@@ -69,6 +76,8 @@ class BusinessAccountService
         if (!empty($data['files'])) {
             $this->storeFiles($account, $data['files']);
         }
+
+        BusinessAccountSubmitted::dispatch($account);
 
         return $account->load(['city', 'activityType']);
     }

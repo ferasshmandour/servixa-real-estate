@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Events\OrderAccepted;
+use App\Events\OrderReceived;
+use App\Events\OrderRejected;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -47,6 +50,8 @@ class OrderService
             'status'                => 'pending',
         ]);
 
+        OrderReceived::dispatch($order);
+
         return $order->load(['service', 'requesterBusiness', 'rating.user']);
     }
 
@@ -88,6 +93,8 @@ class OrderService
 
         $order->update(['status' => 'accepted']);
 
+        OrderAccepted::dispatch($order->fresh());
+
         return $order->fresh(['service', 'requesterBusiness', 'rating.user']);
     }
 
@@ -108,6 +115,8 @@ class OrderService
         );
 
         $order->update(['status' => 'rejected']);
+
+        OrderRejected::dispatch($order->fresh());
 
         return $order->fresh(['service', 'requesterBusiness', 'rating.user']);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\RatingAdded;
 use App\Models\Order;
 use App\Models\Rating;
 use App\Models\User;
@@ -37,6 +38,8 @@ class RatingService
             'rating'     => $data['rating'],
             'comment'    => $data['comment'] ?? null,
         ]);
+
+        RatingAdded::dispatch($rating);
 
         return $rating->load('user');
     }

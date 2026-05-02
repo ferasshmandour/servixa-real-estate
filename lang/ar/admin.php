@@ -15,6 +15,17 @@ return [
     'nav_admins'             => 'المسؤولون',
     'nav_super_admin'        => 'المسؤول الأعلى',
     'nav_administrator'      => 'مسؤول',
+    'nav_notifications'      => 'الإشعارات',
+
+    // Notifications
+    'notifications_title'         => 'الإشعارات',
+    'notifications_mark_all_read' => 'تحديد الكل كمقروء',
+    'notifications_loading'       => 'جاري التحميل…',
+    'notifications_empty'         => 'لا توجد إشعارات جديدة',
+    'notifications_view_all'      => 'عرض الكل',
+    'notifications_unread'        => 'غير مقروءة',
+    'notifications_no_data'       => 'ليس لديك أي إشعارات بعد.',
+    'notifications_enable_push'   => 'تفعيل إشعارات المتصفح',
 
     // Common actions
     'action_edit'            => 'تعديل',

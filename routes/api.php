@@ -5,6 +5,7 @@ use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\API\BusinessAccountController as ApiBusinessAccountController;
 use App\Http\Controllers\API\CategoryController as ApiCategoryController;
 use App\Http\Controllers\API\CityController as ApiCityController;
+use App\Http\Controllers\API\NotificationController as ApiNotificationController;
 use App\Http\Controllers\API\OrderController as ApiOrderController;
 use App\Http\Controllers\API\RatingController as ApiRatingController;
 use App\Http\Controllers\API\ServiceController as ApiServiceController;
@@ -52,4 +53,11 @@ Route::middleware('auth:api')->group(function () {
 
     // Ratings
     Route::post('/ratings', [ApiRatingController::class, 'store']);
+
+    // Notifications
+    Route::get('/notifications', [ApiNotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [ApiNotificationController::class, 'unreadCount']);
+    Route::post('/notifications/read-all', [ApiNotificationController::class, 'markAllRead']);
+    Route::post('/notifications/{id}/read', [ApiNotificationController::class, 'markRead']);
+    Route::delete('/notifications/{id}', [ApiNotificationController::class, 'destroy']);
 });

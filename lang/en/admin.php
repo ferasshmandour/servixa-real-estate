@@ -15,6 +15,17 @@ return [
     'nav_admins'             => 'Admins',
     'nav_super_admin'        => 'Super Admin',
     'nav_administrator'      => 'Administrator',
+    'nav_notifications'      => 'Notifications',
+
+    // Notifications
+    'notifications_title'         => 'Notifications',
+    'notifications_mark_all_read' => 'Mark all as read',
+    'notifications_loading'       => 'Loading…',
+    'notifications_empty'         => 'No new notifications',
+    'notifications_view_all'      => 'View all',
+    'notifications_unread'        => 'Unread',
+    'notifications_no_data'       => 'You have no notifications yet.',
+    'notifications_enable_push'   => 'Enable browser notifications',
 
     // Common actions
     'action_edit'            => 'Edit',

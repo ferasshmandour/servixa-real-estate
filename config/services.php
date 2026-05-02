@@ -40,4 +40,9 @@ return [
         'token' => env('ULTRAMSG_TOKEN'),
     ],
 
+    'fcm' => [
+        'credentials' => env('FIREBASE_CREDENTIALS', storage_path('app/firebase/servixa-firebase-credentials.json')),
+        'project_id'  => 'servixa-1d1a5',
+    ],
+
 ];

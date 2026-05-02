@@ -16,6 +16,198 @@
     {{-- Right side --}}
     <div class="flex items-center gap-3">
 
+        {{-- Notifications bell --}}
+        <div
+            class="relative"
+            x-data="notificationBell({
+                dropdownUrl: '{{ route('admin.notifications.dropdown') }}',
+                indexUrl:    '{{ route('admin.notifications.index') }}',
+                readUrlBase: '{{ url('admin/notifications') }}',
+                readAllUrl:  '{{ route('admin.notifications.read-all') }}',
+                csrf:        '{{ csrf_token() }}'
+            })"
+            x-init="init()"
+        >
+            {{-- "Enable browser notifications" prompt — shown only when permission is 'default'.
+                 Click triggers the native permission popup; on grant, the FCM script registers
+                 the token automatically. --}}
+            <button
+                type="button"
+                x-data="{ show: false }"
+                x-init="
+                    if ('Notification' in window && Notification.permission === 'default') show = true;
+                "
+                x-show="show"
+                x-cloak
+                x-on:click="
+                    Notification.requestPermission().then(p => {
+                        show = false;
+                        if (p === 'granted') window.location.reload();
+                    });
+                "
+                class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 mr-2 rounded-full bg-[#FEF3C7] hover:bg-[#FDE68A] border border-[#FCD34D] text-xs font-semibold text-[#92400E] transition-colors"
+                title="{{ __('admin.notifications_enable_push') }}"
+            >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                {{ __('admin.notifications_enable_push') }}
+            </button>
+        </div>
+
+        {{-- Bell wrapper (separated to keep the prompt outside Alpine's bell scope) --}}
+        <div
+            class="relative"
+            x-data="notificationBell({
+                dropdownUrl: '{{ route('admin.notifications.dropdown') }}',
+                indexUrl:    '{{ route('admin.notifications.index') }}',
+                readUrlBase: '{{ url('admin/notifications') }}',
+                readAllUrl:  '{{ route('admin.notifications.read-all') }}',
+                csrf:        '{{ csrf_token() }}'
+            })"
+            x-init="init()"
+        >
+            {{-- Bell button --}}
+            <button
+                type="button"
+                x-on:click="toggle()"
+                x-on:click.outside="open = false"
+                class="relative flex items-center justify-center w-10 h-10 rounded-xl hover:bg-[#F5F3FF] transition-colors"
+                :class="open ? 'bg-[#F5F3FF]' : ''"
+                aria-label="Notifications"
+            >
+                <svg class="w-5 h-5 transition-colors" :class="open ? 'text-[#6B21A8]' : 'text-[#6B7280]'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                {{-- Unread badge --}}
+                <span
+                    x-show="count > 0"
+                    x-cloak
+                    x-text="count > 99 ? '99+' : count"
+                    class="absolute -top-1 -end-1 min-w-[20px] h-5 px-1 rounded-full bg-[#DC2626] text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white"
+                ></span>
+            </button>
+
+            {{-- Dropdown panel --}}
+            <div
+                x-show="open"
+                x-cloak
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 translate-y-1"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 translate-y-0"
+                x-transition:leave-end="opacity-0 translate-y-1"
+                class="absolute end-0 top-full mt-3 w-[380px] max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-xl border border-[#DDD6FE] z-50"
+                style="box-shadow: 0 8px 32px rgba(107,33,168,0.12), 0 2px 8px rgba(0,0,0,0.06);"
+            >
+                {{-- Header --}}
+                <div class="px-5 py-4 border-b border-[#F3F0FF] flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <h3 class="text-[15px] font-bold text-[#1F2937]">{{ __('admin.notifications_title') }}</h3>
+                        <span
+                            x-show="count > 0"
+                            x-text="count"
+                            class="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-[#6B21A8] text-white text-[11px] font-bold"
+                        ></span>
+                    </div>
+                    <button
+                        type="button"
+                        x-show="count > 0"
+                        x-on:click="markAllRead()"
+                        class="text-xs font-semibold text-[#6B21A8] hover:text-[#7C3AED] hover:bg-[#F5F3FF] px-2.5 py-1 rounded-lg transition-colors"
+                    >
+                        {{ __('admin.notifications_mark_all_read') }}
+                    </button>
+                </div>
+
+                {{-- Scrollable list --}}
+                <div class="overflow-y-auto" style="max-height: 420px;">
+
+                    {{-- Loading skeletons --}}
+                    <template x-if="loading">
+                        <div class="px-5 py-3 space-y-3">
+                            <template x-for="i in [1,2,3]" :key="i">
+                                <div class="flex items-start gap-3 animate-pulse">
+                                    <div class="w-9 h-9 rounded-full bg-[#F3F0FF] shrink-0"></div>
+                                    <div class="flex-1 space-y-2 pt-0.5">
+                                        <div class="h-3 bg-[#F3F0FF] rounded-full w-3/4"></div>
+                                        <div class="h-2.5 bg-[#F3F0FF] rounded-full w-full"></div>
+                                        <div class="h-2 bg-[#F3F0FF] rounded-full w-1/3"></div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+
+                    {{-- Empty state --}}
+                    <template x-if="!loading && notifications.length === 0">
+                        <div class="flex flex-col items-center justify-center py-14 px-6">
+                            <div class="w-16 h-16 rounded-2xl bg-[#F5F3FF] flex items-center justify-center mb-4">
+                                <svg class="w-8 h-8 text-[#C4B5FD]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                                </svg>
+                            </div>
+                            <p class="text-[13px] font-semibold text-[#1F2937] mb-1">{{ __('admin.notifications_empty') }}</p>
+                            <p class="text-xs text-[#9CA3AF] text-center">{{ app()->getLocale() === 'ar' ? 'ستظهر الإشعارات الجديدة هنا' : 'New notifications will appear here' }}</p>
+                        </div>
+                    </template>
+
+                    {{-- Notification items --}}
+                    <template x-for="n in notifications" :key="n.id">
+                        <button
+                            type="button"
+                            x-on:click="openItem(n)"
+                            class="w-full text-start flex items-start gap-3.5 px-5 py-4 border-b border-[#F9F7FF] last:border-0 hover:bg-[#FAFAFF] transition-colors group"
+                            :class="!n.read_at ? 'bg-[#FAF8FF]' : 'bg-white'"
+                        >
+                            {{-- Icon circle --}}
+                            <div class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-colors"
+                                 :class="!n.read_at ? 'bg-[#EDE9FE]' : 'bg-[#F3F4F6]'">
+                                <svg class="w-4 h-4 transition-colors"
+                                     :class="!n.read_at ? 'text-[#6B21A8]' : 'text-[#9CA3AF]'"
+                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                                </svg>
+                            </div>
+
+                            {{-- Content --}}
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-start justify-between gap-2">
+                                    <p class="text-[13px] text-[#111827] leading-snug"
+                                       :class="!n.read_at ? 'font-semibold' : 'font-medium text-[#374151]'"
+                                       x-text="n.data.title"></p>
+                                    {{-- Unread dot --}}
+                                    <span class="shrink-0 mt-1.5 w-2 h-2 rounded-full transition-colors"
+                                          :class="!n.read_at ? 'bg-[#6B21A8]' : 'bg-transparent'"></span>
+                                </div>
+                                <p class="text-xs text-[#6B7280] mt-1 leading-relaxed line-clamp-2" x-text="n.data.body"></p>
+                                <p class="text-[11px] text-[#9CA3AF] mt-1.5 font-medium" x-text="n.created_at"></p>
+                            </div>
+                        </button>
+                    </template>
+
+                </div>
+
+                {{-- Footer --}}
+                <div class="border-t border-[#F3F0FF]">
+                    <a
+                        :href="indexUrl"
+                        class="flex items-center justify-center gap-1.5 px-5 py-3.5 text-[13px] font-semibold text-[#6B21A8] hover:bg-[#F5F3FF] transition-colors rounded-b-2xl"
+                    >
+                        {{ __('admin.notifications_view_all') }}
+                        <svg class="w-3.5 h-3.5 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+
         {{-- Language toggle --}}
         <div class="flex items-center bg-[#F5F3FF] border border-[#DDD6FE] rounded-full p-0.5">
             <a href="{{ route('locale.switch', 'en') }}"

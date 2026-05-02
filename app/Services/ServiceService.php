@@ -2,6 +2,10 @@
 
 namespace App\Services;
 
+use App\Events\ServiceApproved;
+use App\Events\ServiceRejected;
+use App\Events\ServiceResubmitted;
+use App\Events\ServiceSubmitted;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -27,6 +31,8 @@ class ServiceService
             'status'           => 'approved',
             'rejection_reason' => null,
         ]);
+
+        ServiceApproved::dispatch($service->fresh());
     }
 
     public function reject(Service $service, string $reason): void
@@ -35,6 +41,8 @@ class ServiceService
             'status'           => 'rejected',
             'rejection_reason' => $reason,
         ]);
+
+        ServiceRejected::dispatch($service->fresh());
     }
 
     // ─── API — Public ─────────────────────────────────────────────────────────
@@ -140,6 +148,8 @@ class ServiceService
             $this->storeDynamicValues($service, $data['dynamic_values']);
         }
 
+        ServiceSubmitted::dispatch($service);
+
         return $service->load(['businessAccount', 'category', 'subcategory', 'dynamicValues.dynamicField']);
     }
 
@@ -153,9 +163,11 @@ class ServiceService
         );
 
         // Auto-reset to pending if editing an approved service
+        $wasApprovedAndReset = false;
         if ($service->status === 'approved') {
             $service->status = 'pending';
             $service->rejection_reason = null;
+            $wasApprovedAndReset = true;
         }
 
         if (isset($data['category_id'])) {
@@ -214,6 +226,10 @@ class ServiceService
         // Re-upsert dynamic values
         if (!empty($data['dynamic_values'])) {
             $this->storeDynamicValues($service, $data['dynamic_values']);
+        }
+
+        if ($wasApprovedAndReset) {
+            ServiceResubmitted::dispatch($service->fresh());
         }
 
         return $service->load(['businessAccount', 'category', 'subcategory', 'dynamicValues.dynamicField']);
