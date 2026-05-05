@@ -16,7 +16,7 @@ class SendServiceReportedNotification implements ShouldQueue
 
     public function handle(ServiceReported $event): void
     {
-        $admins = Admin::permission('manage-reports')->get();
+        $admins = Admin::recipientsForPermission('manage-reports');
 
         if ($admins->isEmpty()) {
             return;

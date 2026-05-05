@@ -16,7 +16,7 @@ class SendServiceResubmittedNotification implements ShouldQueue
 
     public function handle(ServiceResubmitted $event): void
     {
-        $admins = Admin::permission('manage-services')->get();
+        $admins = Admin::recipientsForPermission('manage-services');
 
         if ($admins->isEmpty()) {
             return;

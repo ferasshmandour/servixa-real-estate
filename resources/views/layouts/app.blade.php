@@ -56,6 +56,11 @@
         Marks items read when clicked. Triggered by the bell icon in the header.
     --}}
     <script>
+    // Shared store so the sidebar badge can read the same count as the bell.
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('notifications', { count: 0 });
+    });
+
     function notificationBell(config) {
         return {
             open: false,
@@ -93,10 +98,13 @@
                         credentials: 'same-origin',
                         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                     });
-                    if (!res.ok) return;
+                    // 401/302 → session expired; don't reset count to avoid badge flicker.
+                    if (!res.ok || res.redirected) return;
                     const data = await res.json();
-                    this.count = data.count || 0;
+                    this.count = data.count ?? 0;
                     this.notifications = data.notifications || [];
+                    // Sync to shared store so sidebar badge updates too.
+                    if (window.Alpine?.store) Alpine.store('notifications').count = this.count;
                 } catch (e) { /* silent */ }
                 finally { this.loading = false; }
             },
@@ -110,10 +118,17 @@
                 if (!n.read_at) {
                     n.read_at = new Date().toISOString();
                     this.count = Math.max(0, this.count - 1);
+                    if (window.Alpine?.store) Alpine.store('notifications').count = this.count;
                     this._sendMarkRead(n.id);
                 }
-                const link = n.data?.data?.deeplink;
-                if (link) window.location.href = link;
+                // n.data structure: { type, title, body, data: { deeplink, ... } }
+                const link = n.data?.data?.deeplink || n.data?.deeplink;
+                if (link) {
+                    const u = new URL(link, window.location.origin);
+                    const tab = sessionStorage.getItem('_tab') || '';
+                    if (tab) u.searchParams.set('_tab', tab);
+                    window.location.href = u.toString();
+                }
             },
 
             async _sendMarkRead(id) {
@@ -133,6 +148,7 @@
             async markAllRead() {
                 this.notifications.forEach(n => { if (!n.read_at) n.read_at = new Date().toISOString(); });
                 this.count = 0;
+                if (window.Alpine?.store) Alpine.store('notifications').count = 0;
                 try {
                     await fetch(this._url(config.readAllUrl), {
                         method: 'POST',
@@ -240,12 +256,14 @@
 
         // Foreground messages: show inline toast (browser doesn't auto-display when tab is visible)
         onMessage(messaging, (payload) => {
-            const title = payload.notification?.title || payload.data?.title || 'Notification';
-            const body  = payload.notification?.body  || payload.data?.body  || '';
+            const title   = payload.notification?.title || payload.data?.title || 'Notification';
+            const body    = payload.notification?.body  || payload.data?.body  || '';
+            const deeplink = payload.data?.deeplink || '';
 
             const toast = document.createElement('div');
             toast.className = 'fixed top-5 end-5 max-w-sm bg-white rounded-xl shadow-lg border border-[#DDD6FE] p-4 z-[9999]';
             toast.style.transition = 'all 0.3s ease-out';
+            if (deeplink) toast.style.cursor = 'pointer';
             toast.innerHTML = `
                 <div class="flex items-start gap-3">
                     <div class="shrink-0 w-9 h-9 rounded-full bg-[#EDE9FE] flex items-center justify-center">
@@ -257,9 +275,18 @@
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-semibold text-[#1F2937]">${title}</p>
                         <p class="text-xs text-[#6B7280] mt-1">${body}</p>
+                        ${deeplink ? '<p class="text-[10px] text-[#6B21A8] mt-1.5 font-medium">{{ app()->getLocale() === "ar" ? "انقر للفتح" : "Click to open" }}</p>' : ''}
                     </div>
                 </div>
             `;
+            if (deeplink) {
+                toast.addEventListener('click', () => {
+                    const u = new URL(deeplink, window.location.origin);
+                    const tab = sessionStorage.getItem('_tab') || '';
+                    if (tab) u.searchParams.set('_tab', tab);
+                    window.location.href = u.toString();
+                });
+            }
             document.body.appendChild(toast);
             setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(20px)'; }, 5500);
             setTimeout(() => toast.remove(), 6000);
@@ -267,6 +294,20 @@
             // Refresh the bell badge if the component is mounted
             window.dispatchEvent(new CustomEvent('notifications:refresh'));
         });
+
+        // Handle navigation requests from the service worker (background notification click).
+        // The SW posts FCM_NAVIGATE so the page navigates with its own _tab value,
+        // keeping the session intact instead of landing on the login page.
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data?.type === 'FCM_NAVIGATE' && event.data.deeplink) {
+                    const u = new URL(event.data.deeplink, window.location.origin);
+                    const tab = sessionStorage.getItem('_tab') || '';
+                    if (tab) u.searchParams.set('_tab', tab);
+                    window.location.href = u.toString();
+                }
+            });
+        }
 
         if ('serviceWorker' in navigator && 'Notification' in window) {
             window.addEventListener('load', registerToken);

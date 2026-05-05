@@ -16,47 +16,35 @@
     {{-- Right side --}}
     <div class="flex items-center gap-3">
 
-        {{-- Notifications bell --}}
-        <div
-            class="relative"
-            x-data="notificationBell({
-                dropdownUrl: '{{ route('admin.notifications.dropdown') }}',
-                indexUrl:    '{{ route('admin.notifications.index') }}',
-                readUrlBase: '{{ url('admin/notifications') }}',
-                readAllUrl:  '{{ route('admin.notifications.read-all') }}',
-                csrf:        '{{ csrf_token() }}'
-            })"
-            x-init="init()"
+        {{-- "Enable browser notifications" prompt — shown only when permission is 'default'.
+             Click triggers the native permission popup; on grant, the FCM script registers
+             the token automatically. Standalone — must NOT be wrapped in notificationBell()
+             or that component initializes twice and every notification appears twice. --}}
+        <button
+            type="button"
+            x-data="{ show: false }"
+            x-init="
+                if ('Notification' in window && Notification.permission === 'default') show = true;
+            "
+            x-show="show"
+            x-cloak
+            x-on:click="
+                Notification.requestPermission().then(p => {
+                    show = false;
+                    if (p === 'granted') window.location.reload();
+                });
+            "
+            class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FEF3C7] hover:bg-[#FDE68A] border border-[#FCD34D] text-xs font-semibold text-[#92400E] transition-colors"
+            title="{{ __('admin.notifications_enable_push') }}"
         >
-            {{-- "Enable browser notifications" prompt — shown only when permission is 'default'.
-                 Click triggers the native permission popup; on grant, the FCM script registers
-                 the token automatically. --}}
-            <button
-                type="button"
-                x-data="{ show: false }"
-                x-init="
-                    if ('Notification' in window && Notification.permission === 'default') show = true;
-                "
-                x-show="show"
-                x-cloak
-                x-on:click="
-                    Notification.requestPermission().then(p => {
-                        show = false;
-                        if (p === 'granted') window.location.reload();
-                    });
-                "
-                class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 mr-2 rounded-full bg-[#FEF3C7] hover:bg-[#FDE68A] border border-[#FCD34D] text-xs font-semibold text-[#92400E] transition-colors"
-                title="{{ __('admin.notifications_enable_push') }}"
-            >
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                </svg>
-                {{ __('admin.notifications_enable_push') }}
-            </button>
-        </div>
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+            </svg>
+            {{ __('admin.notifications_enable_push') }}
+        </button>
 
-        {{-- Bell wrapper (separated to keep the prompt outside Alpine's bell scope) --}}
+        {{-- Bell wrapper --}}
         <div
             class="relative"
             x-data="notificationBell({
@@ -68,27 +56,30 @@
             })"
             x-init="init()"
         >
-            {{-- Bell button --}}
-            <button
-                type="button"
-                x-on:click="toggle()"
-                x-on:click.outside="open = false"
-                class="relative flex items-center justify-center w-10 h-10 rounded-xl hover:bg-[#F5F3FF] transition-colors"
-                :class="open ? 'bg-[#F5F3FF]' : ''"
-                aria-label="Notifications"
-            >
-                <svg class="w-5 h-5 transition-colors" :class="open ? 'text-[#6B21A8]' : 'text-[#6B7280]'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                </svg>
-                {{-- Unread badge --}}
+            {{-- Bell button — filled rounded-square with badge on top-right corner --}}
+            <div class="relative inline-flex shrink-0">
+                <button
+                    type="button"
+                    x-on:click="toggle()"
+                    x-on:click.outside="open = false"
+                    class="flex items-center justify-center w-12 h-12 rounded-2xl transition-all duration-200"
+                    :class="open
+                        ? 'bg-[#7C3AED] shadow-[0_6px_20px_rgba(107,33,168,0.5)]'
+                        : 'bg-[#6B21A8] shadow-[0_4px_14px_rgba(107,33,168,0.35)] hover:bg-[#7C3AED] hover:shadow-[0_6px_20px_rgba(107,33,168,0.5)]'"
+                    aria-label="Notifications"
+                >
+                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                    </svg>
+                </button>
+                {{-- Badge sits outside the button so it's never clipped --}}
                 <span
                     x-show="count > 0"
                     x-cloak
                     x-text="count > 99 ? '99+' : count"
-                    class="absolute -top-1 -end-1 min-w-[20px] h-5 px-1 rounded-full bg-[#DC2626] text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white"
+                    class="pointer-events-none absolute -top-2 -right-2 min-w-5.5 h-5.5 px-1.5 rounded-full bg-[#DC2626] text-white text-[11px] font-bold flex items-center justify-center ring-2 ring-white shadow"
                 ></span>
-            </button>
+            </div>
 
             {{-- Dropdown panel --}}
             <div
@@ -100,7 +91,7 @@
                 x-transition:leave="transition ease-in duration-150"
                 x-transition:leave-start="opacity-100 translate-y-0"
                 x-transition:leave-end="opacity-0 translate-y-1"
-                class="absolute end-0 top-full mt-3 w-[380px] max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-xl border border-[#DDD6FE] z-50"
+                class="absolute inset-e-0 top-full mt-3 w-100 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-xl border border-[#DDD6FE] z-50"
                 style="box-shadow: 0 8px 32px rgba(107,33,168,0.12), 0 2px 8px rgba(0,0,0,0.06);"
             >
                 {{-- Header --}}
@@ -110,7 +101,7 @@
                         <span
                             x-show="count > 0"
                             x-text="count"
-                            class="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-[#6B21A8] text-white text-[11px] font-bold"
+                            class="inline-flex items-center justify-center min-w-5.5 h-5.5 px-1.5 rounded-full bg-[#6B21A8] text-white text-[11px] font-bold"
                         ></span>
                     </div>
                     <button
@@ -161,32 +152,39 @@
                         <button
                             type="button"
                             x-on:click="openItem(n)"
-                            class="w-full text-start flex items-start gap-3.5 px-5 py-4 border-b border-[#F9F7FF] last:border-0 hover:bg-[#FAFAFF] transition-colors group"
-                            :class="!n.read_at ? 'bg-[#FAF8FF]' : 'bg-white'"
+                            class="w-full text-start flex items-start gap-4 px-4 py-3.5 mx-2 my-1 rounded-2xl transition-all duration-150 active:scale-95"
+                            :class="!n.read_at
+                                ? 'bg-[#F5F3FF] hover:bg-[#EDE9FE] border border-[#DDD6FE]'
+                                : 'bg-white hover:bg-[#F9F8FF] border border-transparent hover:border-[#EDE9FE]'"
+                            style="width: calc(100% - 1rem);"
                         >
-                            {{-- Icon circle --}}
-                            <div class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-colors"
-                                 :class="!n.read_at ? 'bg-[#EDE9FE]' : 'bg-[#F3F4F6]'">
-                                <svg class="w-4 h-4 transition-colors"
-                                     :class="!n.read_at ? 'text-[#6B21A8]' : 'text-[#9CA3AF]'"
-                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                            {{-- Icon rounded-square --}}
+                            <div class="shrink-0 w-11 h-11 rounded-2xl flex items-center justify-center transition-colors"
+                                 :class="!n.read_at ? 'bg-[#6B21A8]' : 'bg-[#F3F4F6]'">
+                                <svg class="w-5 h-5"
+                                     :class="!n.read_at ? 'text-white' : 'text-[#9CA3AF]'"
+                                     fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
                                 </svg>
                             </div>
 
                             {{-- Content --}}
                             <div class="flex-1 min-w-0">
-                                <div class="flex items-start justify-between gap-2">
-                                    <p class="text-[13px] text-[#111827] leading-snug"
-                                       :class="!n.read_at ? 'font-semibold' : 'font-medium text-[#374151]'"
+                                <div class="flex items-center justify-between gap-2 mb-1">
+                                    <p class="text-[13px] leading-snug truncate"
+                                       :class="!n.read_at ? 'font-bold text-[#1F2937]' : 'font-medium text-[#374151]'"
                                        x-text="n.data.title"></p>
                                     {{-- Unread dot --}}
-                                    <span class="shrink-0 mt-1.5 w-2 h-2 rounded-full transition-colors"
-                                          :class="!n.read_at ? 'bg-[#6B21A8]' : 'bg-transparent'"></span>
+                                    <span x-show="!n.read_at"
+                                          class="shrink-0 w-2.5 h-2.5 rounded-full bg-[#6B21A8]"></span>
                                 </div>
-                                <p class="text-xs text-[#6B7280] mt-1 leading-relaxed line-clamp-2" x-text="n.data.body"></p>
-                                <p class="text-[11px] text-[#9CA3AF] mt-1.5 font-medium" x-text="n.created_at"></p>
+                                <p class="text-[12px] text-[#6B7280] leading-relaxed line-clamp-2" x-text="n.data.body"></p>
+                                <div class="flex items-center gap-1.5 mt-2">
+                                    <svg class="w-3 h-3 text-[#9CA3AF] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <p class="text-[11px] text-[#9CA3AF] font-medium" x-text="n.created_at"></p>
+                                </div>
                             </div>
                         </button>
                     </template>
@@ -254,7 +252,7 @@
                 x-transition:leave="transition ease-in duration-100"
                 x-transition:leave-start="opacity-100 scale-100 translate-y-0"
                 x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
-                class="absolute end-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-[#DDD6FE] py-1 z-50"
+                class="absolute inset-e-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-[#DDD6FE] py-1 z-50"
             >
                 <form method="POST" action="{{ route('admin.logout') }}">
                     @csrf

@@ -59,9 +59,10 @@
     @if($accounts->isEmpty())
         <x-empty-state :message="__('admin.ba_empty')" />
     @else
-        <x-data-table :headers="[__('admin.ba_col_business'), __('admin.ba_col_owner'), __('admin.ba_col_city'), __('admin.ba_col_type'), 'License #', __('admin.label_status'), __('admin.ba_col_submitted'), '']">
+        <x-data-table :headers="['#', __('admin.ba_col_business'), __('admin.ba_col_owner'), __('admin.ba_col_city'), __('admin.ba_col_type'), 'License #', __('admin.label_status'), __('admin.ba_col_submitted'), '']">
             @foreach($accounts as $account)
             <tr class="hover:bg-[#F8F7FF] transition-colors">
+                <td class="px-4 py-3 text-xs text-[#6B7280] font-mono">{{ $account->id }}</td>
                 <td class="px-4 py-3">
                     <div class="font-semibold text-[#1F2937]">{{ $account->name }}</div>
                 </td>

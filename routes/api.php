@@ -48,6 +48,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/orders', [ApiOrderController::class, 'store']);
     Route::get('/orders/received', [ApiOrderController::class, 'received']);
     Route::get('/orders/sent', [ApiOrderController::class, 'sent']);
+    Route::get('/orders/{id}', [ApiOrderController::class, 'show']);
     Route::patch('/orders/{id}/status', [ApiOrderController::class, 'updateStatus']);
     Route::delete('/orders/{id}', [ApiOrderController::class, 'destroy']);
 

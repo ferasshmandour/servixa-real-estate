@@ -51,4 +51,14 @@ class Admin extends Authenticatable
     {
         return $this->deviceTokens()->pluck('token')->all();
     }
+
+    /**
+     * Returns all admins who have the given permission (via any role).
+     * Each admin receives their own separate notification — scoped purely
+     * by permission so different admin roles get only what they're allowed to see.
+     */
+    public static function recipientsForPermission(string $permission): \Illuminate\Support\Collection
+    {
+        return static::permission($permission)->get();
+    }
 }

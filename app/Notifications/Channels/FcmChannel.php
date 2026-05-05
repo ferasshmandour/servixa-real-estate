@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Contract\Messaging;
 use Kreait\Firebase\Exception\MessagingException;
 use Kreait\Firebase\Messaging\CloudMessage;
-use Kreait\Firebase\Messaging\Notification as FcmNotification;
 use Throwable;
 
 class FcmChannel
@@ -35,51 +34,53 @@ class FcmChannel
 
         $payload = $notification->toFcm($notifiable);
 
-        $message = CloudMessage::new()
-            ->withNotification(FcmNotification::create(
-                $payload['title'] ?? '',
-                $payload['body']  ?? ''
-            ))
-            ->withData($payload['data'] ?? []);
+        // Data-only message — NO `notification` block. With a `notification`
+        // block the browser auto-displays the message, AND the service worker's
+        // onBackgroundMessage runs, AND the foreground onMessage runs — which
+        // can show the same notification two or three times. By sending data
+        // only, our service worker (background) and inline onMessage handler
+        // (foreground) each fire exactly once and we control display ourselves.
+        $data = array_merge(
+            ['title' => $payload['title'] ?? '', 'body' => $payload['body'] ?? ''],
+            $payload['data'] ?? []
+        );
+        $data = array_map(fn($v) => (string) ($v ?? ''), $data);
+
+        $message = CloudMessage::new()->withData($data);
 
         try {
             $report = $this->messaging->sendMulticast($message, $tokens);
+            Log::info('[FcmChannel] sent', [
+                'tokens'    => count($tokens),
+                'successes' => $report->successes()->count(),
+                'failures'  => $report->failures()->count(),
+            ]);
+            $this->pruneInvalidTokens($report);
         } catch (MessagingException|Throwable $e) {
             Log::warning('[FcmChannel] sendMulticast failed', [
-                'error'   => $e->getMessage(),
-                'tokens'  => count($tokens),
+                'error'  => $e->getMessage(),
+                'tokens' => count($tokens),
             ]);
-            return;
         }
-
-        $this->pruneInvalidTokens($report->responses());
     }
 
     /**
      * Delete tokens that Firebase reports as invalid / unregistered.
+     * Uses MulticastSendReport::invalidTokens() and unknownTokens() — the
+     * only public API on this SDK version (responses() does not exist).
      */
-    private function pruneInvalidTokens(array $responses): void
+    private function pruneInvalidTokens(\Kreait\Firebase\Messaging\MulticastSendReport $report): void
     {
-        $invalid = [];
-
-        foreach ($responses as $response) {
-            if ($response->isFailure() && $response->error() !== null) {
-                $code = $response->error()->code() ?? '';
-
-                if (in_array($code, [
-                    'messaging/registration-token-not-registered',
-                    'messaging/invalid-registration-token',
-                    'messaging/invalid-argument',
-                    'NOT_FOUND',
-                    'UNREGISTERED',
-                    'INVALID_ARGUMENT',
-                ], true)) {
-                    $invalid[] = $response->target()?->value();
-                }
-            }
+        if (!$report->hasFailures()) {
+            return;
         }
 
-        $invalid = array_filter($invalid);
+        $invalid = array_merge(
+            $report->invalidTokens(),
+            $report->unknownTokens(),
+        );
+
+        $invalid = array_filter(array_unique($invalid));
 
         if (!empty($invalid)) {
             AdminDeviceToken::whereIn('token', $invalid)->delete();

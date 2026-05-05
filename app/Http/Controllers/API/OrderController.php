@@ -35,6 +35,13 @@ class OrderController extends Controller
         return $this->success(OrderResource::collection($orders));
     }
 
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $order = $this->orderService->getOrder($id, $request->user());
+
+        return $this->success(new OrderResource($order));
+    }
+
     public function updateStatus(UpdateOrderStatusRequest $request, int $id): JsonResponse
     {
         $status = $request->validated()['status'];

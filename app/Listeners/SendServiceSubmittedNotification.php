@@ -16,7 +16,7 @@ class SendServiceSubmittedNotification implements ShouldQueue
 
     public function handle(ServiceSubmitted $event): void
     {
-        $admins = Admin::permission('manage-services')->get();
+        $admins = Admin::recipientsForPermission('manage-services');
 
         if ($admins->isEmpty()) {
             return;

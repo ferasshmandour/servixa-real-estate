@@ -32,20 +32,26 @@ messaging.onBackgroundMessage((payload) => {
     self.registration.showNotification(title, options);
 });
 
-// Click → focus the dashboard tab (or open it) at the deeplink, if provided.
+// Click → navigate existing dashboard tab to the deeplink (preserving _tab session).
+// We post a message to the existing client so it navigates with its own _tab value,
+// avoiding a session mismatch that would redirect to the login page.
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
-    const target = (event.notification.data && event.notification.data.deeplink) || '/admin/dashboard';
+    const deeplink = (event.notification.data && event.notification.data.deeplink) || '/admin/dashboard';
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+            // Find an open dashboard tab and tell it to navigate.
             for (const win of wins) {
-                if ('focus' in win) {
-                    win.navigate(target);
+                if (win.url && win.url.includes('/admin')) {
+                    win.postMessage({ type: 'FCM_NAVIGATE', deeplink });
                     return win.focus();
                 }
             }
-            if (clients.openWindow) return clients.openWindow(target);
+            // No open tab — open a new one. The tab-aware script will attach _tab
+            // and then the server will create a new session for it (login required).
+            // This is unavoidable when the browser is closed.
+            if (clients.openWindow) return clients.openWindow(deeplink);
         })
     );
 });

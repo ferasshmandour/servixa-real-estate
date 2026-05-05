@@ -16,7 +16,7 @@ class SendBusinessAccountSubmittedNotification implements ShouldQueue
 
     public function handle(BusinessAccountSubmitted $event): void
     {
-        $admins = Admin::permission('manage-business-accounts')->get();
+        $admins = Admin::recipientsForPermission('manage-business-accounts');
 
         if ($admins->isEmpty()) {
             return;

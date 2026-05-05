@@ -75,6 +75,22 @@ class OrderService
             ->paginate(15);
     }
 
+    public function getOrder(int $orderId, User $user): Order
+    {
+        $businessAccountIds = $user->businessAccounts()->pluck('id');
+
+        $order = Order::with(['service', 'requesterBusiness', 'rating.user'])->findOrFail($orderId);
+
+        abort_if(
+            !$businessAccountIds->contains($order->requester_business_id) &&
+            !$businessAccountIds->contains($order->service->business_account_id),
+            403,
+            'You do not have permission to view this order.'
+        );
+
+        return $order;
+    }
+
     public function acceptOrder(int $orderId, User $user): Order
     {
         $order = Order::with(['service.businessAccount', 'requesterBusiness', 'rating.user'])->findOrFail($orderId);

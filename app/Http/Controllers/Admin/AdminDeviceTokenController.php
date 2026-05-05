@@ -23,10 +23,16 @@ class AdminDeviceTokenController extends Controller
 
         $admin = $request->user('admin');
 
+        // A single browser token can only belong to one admin at a time.
+        // If another admin's session registered this token first, remove it
+        // so that admin doesn't receive push notifications meant for this admin.
+        AdminDeviceToken::where('token', $data['token'])
+            ->where('admin_id', '!=', $admin->id)
+            ->delete();
+
         AdminDeviceToken::updateOrCreate(
-            ['token' => $data['token']],
+            ['admin_id' => $admin->id, 'token' => $data['token']],
             [
-                'admin_id'     => $admin->id,
                 'platform'     => $data['platform'] ?? 'web',
                 'last_used_at' => now(),
             ]
