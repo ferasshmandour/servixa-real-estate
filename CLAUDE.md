@@ -32,14 +32,13 @@ A regulated digital marketplace for real estate and construction-related service
 | **2 — Roles + Business Accounts** | Spatie permissions, cities, activity types, business account workflow | ✅ Complete |
 | **3 — Services** | Categories, dynamic fields, services CRUD + admin approval | ✅ Complete |
 | **4 — Orders + Ratings + Notifications** | Orders lifecycle, rating gate, Firebase FCM push, Event/Listener system | ✅ Complete |
-| **5 — Chat** | Pusher real-time messaging, sent/read status | ❌ Not started (models exist, no controllers/routes) |
+| **5 — Chat** | API-only chat (no Pusher), sent/read status, FCM push on new message | ✅ Complete (API-only — Pusher deferred) |
 | **6 — Polish** | Favorites API, Reports API, advanced filters, bilingual + permission audit | ❌ Not started (models exist, no controllers/routes) |
 
 ### Outstanding gaps in built features
 - **Favorites** — model + migration exist, but no API controller, service, or routes
 - **Reports** — model + migration exist, but no API controller, service, or routes (admin route is a placeholder redirect)
-- **Chat** — `Conversation` + `Message` models + `MessageSent` event + listener exist, but no service, controller, routes, or Pusher package
-- **Pusher** — `pusher/pusher-php-server` is **not installed**; chat is blocked on this
+- **Pusher** — `pusher/pusher-php-server` is **not installed** by design (chat ships API-only). Adding it later only requires making `MessageSent` implement `ShouldBroadcast` + configuring `config/broadcasting.php` — no controller/service changes
 
 ---
 
@@ -69,7 +68,15 @@ php artisan passport:install      # run ONCE after first migrate
 
 # Single test
 php artisan test --filter TestClassName
+
+# Performance — caches MUST be warm in production-like usage.
+# Without these, every request reparses config/routes and recompiles Blade.
+php artisan optimize          # caches config + routes + events
+php artisan view:cache        # precompiles ALL Blade templates
+php artisan optimize:clear    # clear all caches (do this BEFORE editing config/routes/.env)
 ```
+
+**IMPORTANT:** After ANY change to `.env`, `config/*`, `routes/*`, or `bootstrap/app.php`, run `php artisan optimize:clear` first or the change will not be picked up. Re-run `php artisan optimize && php artisan view:cache` afterwards. Blade view edits are auto-detected — no clear needed.
 
 ---
 
@@ -169,9 +176,9 @@ routes/
 
 ### Services (built — 12)
 
-`ActivityTypeService` · `AdminAuthService` · `AuthService` · `BusinessAccountService` · `CategoryService` · `CityService` · `NotificationService` · `OrderService` · `OtpService` · `RatingService` · `ServiceService` · `SliderService`
+`ActivityTypeService` · `AdminAuthService` · `AuthService` · `BusinessAccountService` · `CategoryService` · `ChatService` · `CityService` · `NotificationService` · `OrderService` · `OtpService` · `RatingService` · `ServiceService` · `SliderService`
 
-**Pending services** (when those features are built): `ChatService`, `FavoriteService`, `ReportService`
+**Pending services** (when those features are built): `FavoriteService`, `ReportService`
 
 ---
 
@@ -439,12 +446,20 @@ POST   /api/v1/notifications/read-all
 GET    /api/v1/notifications/unread-count
 ```
 
+### Routes — Phase 5 Chat (built, API-only)
+```
+GET    /api/v1/conversations                  list my conversations
+POST   /api/v1/conversations                  start (body: {service_id})
+GET    /api/v1/conversations/{id}             show one conversation
+POST   /api/v1/conversations/{id}/read        mark all incoming messages as read
+GET    /api/v1/conversations/{id}/messages    paginated message history
+POST   /api/v1/conversations/{id}/messages    send (body: {content})
+```
+
 ### Routes — NOT yet built
 ```
 GET|POST|DELETE /api/v1/favorites             ← Phase 6
 POST   /api/v1/reports                        ← Phase 6
-GET|POST /api/v1/conversations                ← Phase 5
-GET|POST /api/v1/conversations/{id}/messages  ← Phase 5
 ```
 
 ---
@@ -665,7 +680,7 @@ reports/{index,show}.blade.php   ← Phase 6
 | 2 — Roles + Business Accounts | Week 2 | Spatie permissions, cities, activity types, business account workflow | ✅ |
 | 3 — Services | Week 3 | Categories, subcategories, dynamic fields, services CRUD + admin approval | ✅ |
 | 4 — Orders + Ratings + Notifications | Week 4 | Orders lifecycle, rating gate, Firebase push (events/listeners/FCM channel) | ✅ |
-| 5 — Chat | 3 days | Pusher real-time messaging, sent/read status | ❌ |
+| 5 — Chat | 3 days | API-only chat (send/receive text, sent/read, conversation linked to service), FCM push on new message. Pusher deferred. | ✅ |
 | 6 — Polish | Week 6 | Favorites, reports, advanced filters, bilingual audit, permission audit | ❌ |
 
 ---

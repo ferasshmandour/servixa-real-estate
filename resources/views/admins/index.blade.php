@@ -70,6 +70,12 @@
             </tr>
             @endforeach
         </x-data-table>
+
+        @if($admins->hasPages())
+            <div class="mt-4">
+                {{ $admins->links() }}
+            </div>
+        @endif
     @endif
 </x-card>
 

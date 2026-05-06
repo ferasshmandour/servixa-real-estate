@@ -5,6 +5,8 @@ use App\Http\Controllers\API\Auth\AuthController;
 use App\Http\Controllers\API\BusinessAccountController as ApiBusinessAccountController;
 use App\Http\Controllers\API\CategoryController as ApiCategoryController;
 use App\Http\Controllers\API\CityController as ApiCityController;
+use App\Http\Controllers\API\ConversationController as ApiConversationController;
+use App\Http\Controllers\API\MessageController as ApiMessageController;
 use App\Http\Controllers\API\NotificationController as ApiNotificationController;
 use App\Http\Controllers\API\OrderController as ApiOrderController;
 use App\Http\Controllers\API\RatingController as ApiRatingController;
@@ -54,6 +56,14 @@ Route::middleware('auth:api')->group(function () {
 
     // Ratings
     Route::post('/ratings', [ApiRatingController::class, 'store']);
+
+    // Conversations & Messages
+    Route::get('/conversations', [ApiConversationController::class, 'index']);
+    Route::post('/conversations', [ApiConversationController::class, 'store']);
+    Route::get('/conversations/{id}', [ApiConversationController::class, 'show']);
+    Route::post('/conversations/{id}/read', [ApiConversationController::class, 'markAsRead']);
+    Route::get('/conversations/{id}/messages', [ApiMessageController::class, 'index']);
+    Route::post('/conversations/{id}/messages', [ApiMessageController::class, 'store']);
 
     // Notifications
     Route::get('/notifications', [ApiNotificationController::class, 'index']);

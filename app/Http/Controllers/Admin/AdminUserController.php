@@ -14,7 +14,7 @@ class AdminUserController extends Controller
 {
     public function index(): View
     {
-        $admins = Admin::with('roles')->orderBy('name')->get();
+        $admins = Admin::with('roles')->orderBy('name')->paginate(20);
 
         return view('admins.index', compact('admins'));
     }

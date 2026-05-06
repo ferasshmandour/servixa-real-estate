@@ -16,7 +16,7 @@ class ServiceService
 
     public function listForAdmin(?string $status = null, ?string $search = null): LengthAwarePaginator
     {
-        return Service::with(['businessAccount', 'category', 'subcategory'])
+        return Service::with(['businessAccount', 'category', 'subcategory', 'media'])
             ->when($status && $status !== 'all', fn($q) => $q->where('status', $status))
             ->when($search, fn($q) => $q->whereRaw("JSON_SEARCH(LOWER(title), 'one', LOWER(?)) IS NOT NULL", ["%{$search}%"]))
             ->latest()
@@ -49,7 +49,7 @@ class ServiceService
 
     public function listPublic(array $filters): LengthAwarePaginator
     {
-        return Service::with(['businessAccount', 'category', 'subcategory'])
+        return Service::with(['businessAccount', 'category', 'subcategory', 'media'])
             ->where('status', 'approved')
             ->when(
                 isset($filters['category_id']),
@@ -98,7 +98,7 @@ class ServiceService
     {
         $businessAccountIds = $user->businessAccounts()->pluck('id');
 
-        return Service::with(['businessAccount', 'category', 'subcategory'])
+        return Service::with(['businessAccount', 'category', 'subcategory', 'media'])
             ->whereIn('business_account_id', $businessAccountIds)
             ->latest()
             ->paginate(15);
