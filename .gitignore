@@ -22,4 +22,13 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
-CLAUDE.md
+
+# --- Production: exclude internal docs & design assets ---
+# All Markdown docs (README, CLAUDE, SRS, PRD, specs, etc.)
+*.md
+# Design / planning / reference material (not needed at runtime)
+/figma/
+/figma dashboard/
+/files/
+/diagrams/
+/erd.html
