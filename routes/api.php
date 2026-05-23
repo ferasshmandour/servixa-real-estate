@@ -6,10 +6,12 @@ use App\Http\Controllers\API\BusinessAccountController as ApiBusinessAccountCont
 use App\Http\Controllers\API\CategoryController as ApiCategoryController;
 use App\Http\Controllers\API\CityController as ApiCityController;
 use App\Http\Controllers\API\ConversationController as ApiConversationController;
+use App\Http\Controllers\API\FavoriteController as ApiFavoriteController;
 use App\Http\Controllers\API\MessageController as ApiMessageController;
 use App\Http\Controllers\API\NotificationController as ApiNotificationController;
 use App\Http\Controllers\API\OrderController as ApiOrderController;
 use App\Http\Controllers\API\RatingController as ApiRatingController;
+use App\Http\Controllers\API\ReportController as ApiReportController;
 use App\Http\Controllers\API\ServiceController as ApiServiceController;
 use Illuminate\Support\Facades\Route;
 
@@ -56,6 +58,14 @@ Route::middleware('auth:api')->group(function () {
 
     // Ratings
     Route::post('/ratings', [ApiRatingController::class, 'store']);
+
+    // Favorites
+    Route::get('/favorites',            [ApiFavoriteController::class, 'index']);
+    Route::post('/favorites',           [ApiFavoriteController::class, 'store']);
+    Route::delete('/favorites/{service}', [ApiFavoriteController::class, 'destroy']);
+
+    // Reports
+    Route::post('/reports', [ApiReportController::class, 'store']);
 
     // Conversations & Messages
     Route::get('/conversations', [ApiConversationController::class, 'index']);

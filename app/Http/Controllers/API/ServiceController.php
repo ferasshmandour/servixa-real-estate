@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\API\Service\ListServicesRequest;
 use App\Http\Requests\API\Service\StoreServiceRequest;
 use App\Http\Requests\API\Service\UpdateServiceRequest;
 use App\Http\Resources\ServiceResource;
@@ -15,24 +16,21 @@ class ServiceController extends Controller
 {
     public function __construct(private ServiceService $service) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(ListServicesRequest $request): JsonResponse
     {
-        $filters  = $request->only([
-            'category_id', 'subcategory_id', 'type',
-            'price_syp_min', 'price_syp_max',
-            'price_usd_min', 'price_usd_max',
-            'search',
-        ]);
-        $services = $this->service->listPublic($filters);
+        $request->user()?->loadMissing('favorites');
+
+        $services = $this->service->listPublic($request->validated());
 
         return $this->success(ServiceResource::collection($services));
     }
 
-    public function show(Service $service): JsonResponse
+    public function show(Request $request, Service $service): JsonResponse
     {
         abort_if($service->status !== 'approved', 404, 'Service not found.');
 
         $service->load(['businessAccount', 'category', 'subcategory', 'dynamicValues.dynamicField']);
+        $request->user()?->loadMissing('favorites');
 
         return $this->success(new ServiceResource($service));
     }

@@ -32,6 +32,7 @@ class ServiceResource extends JsonResource
             'subcategory'        => new CategoryResource($this->whenLoaded('subcategory')),
             'avg_rating'         => round($this->ratings()->avg('rating') ?? 0, 1),
             'ratings_count'      => $this->ratings()->count(),
+            'is_favorite'        => (bool) $request->user()?->favorites?->contains('service_id', $this->id),
             'created_at'         => $this->created_at->toIso8601String(),
         ];
     }

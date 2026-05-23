@@ -55,6 +55,15 @@ return [
         'body'  => 'تم الإبلاغ عن الخدمة ":title". السبب: :reason',
     ],
 
+    'report_approved' => [
+        'title' => 'تم قبول بلاغك',
+        'body'  => 'شكراً لك — تمت إزالة الخدمة ":title".',
+    ],
+    'report_rejected' => [
+        'title' => 'تمت مراجعة بلاغك',
+        'body'  => 'بعد المراجعة لم يتم اتخاذ إجراء. ملاحظة الإدارة: :note',
+    ],
+
     'new_message' => [
         'title' => 'رسالة جديدة من :sender',
         'body'  => ':preview',

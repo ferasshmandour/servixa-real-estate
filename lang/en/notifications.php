@@ -55,6 +55,15 @@ return [
         'body'  => 'Service ":title" was reported. Reason: :reason',
     ],
 
+    'report_approved' => [
+        'title' => 'Your report was approved',
+        'body'  => 'Thank you — the service ":title" has been removed.',
+    ],
+    'report_rejected' => [
+        'title' => 'Your report has been reviewed',
+        'body'  => 'After review, no action was taken. Admin note: :note',
+    ],
+
     'new_message' => [
         'title' => 'New message from :sender',
         'body'  => ':preview',

@@ -2,7 +2,7 @@
 
 > This file is the single source of truth for Claude Code when working in this repository.
 > **Rule:** Any time a new library, decision, or business rule is confirmed, update this file immediately.
-> **Last synced with codebase:** 2026-05-05 (HEAD: `d06d0ab` — Phase 4 with notifications complete)
+> **Last synced with codebase:** 2026-05-07 (Phase 6 complete — Favorites + Reports + Advanced filters)
 
 ---
 
@@ -33,11 +33,9 @@ A regulated digital marketplace for real estate and construction-related service
 | **3 — Services** | Categories, dynamic fields, services CRUD + admin approval | ✅ Complete |
 | **4 — Orders + Ratings + Notifications** | Orders lifecycle, rating gate, Firebase FCM push, Event/Listener system | ✅ Complete |
 | **5 — Chat** | API-only chat (no Pusher), sent/read status, FCM push on new message | ✅ Complete (API-only — Pusher deferred) |
-| **6 — Polish** | Favorites API, Reports API, advanced filters, bilingual + permission audit | ❌ Not started (models exist, no controllers/routes) |
+| **6 — Polish** | Favorites API, Reports (API + admin), advanced filters, bilingual + permission audit | ✅ Complete |
 
 ### Outstanding gaps in built features
-- **Favorites** — model + migration exist, but no API controller, service, or routes
-- **Reports** — model + migration exist, but no API controller, service, or routes (admin route is a placeholder redirect)
 - **Pusher** — `pusher/pusher-php-server` is **not installed** by design (chat ships API-only). Adding it later only requires making `MessageSent` implement `ShouldBroadcast` + configuring `config/broadcasting.php` — no controller/service changes
 
 ---
@@ -128,9 +126,11 @@ app/
 │   │   │   ├── BusinessAccountController.php
 │   │   │   ├── CategoryController.php
 │   │   │   ├── CityController.php
+│   │   │   ├── FavoriteController.php
 │   │   │   ├── NotificationController.php
 │   │   │   ├── OrderController.php
 │   │   │   ├── RatingController.php
+│   │   │   ├── ReportController.php
 │   │   │   └── ServiceController.php
 │   │   └── Admin/
 │   │       ├── AuthController.php
@@ -143,6 +143,7 @@ app/
 │   │       ├── DashboardController.php
 │   │       ├── DynamicFieldController.php
 │   │       ├── NotificationController.php
+│   │       ├── ReportController.php
 │   │       ├── RoleController.php
 │   │       ├── ServiceController.php
 │   │       └── SliderController.php
@@ -174,11 +175,9 @@ routes/
 
 > **Note:** `service_images` migration exists but no `ServiceImage` model — `Service` uses Spatie MediaLibrary (`HasMedia`) for images instead. There is also no separate `Notification` Eloquent model; notifications are delivered via the FCM channel (not stored in the DB as Eloquent models — though the polymorphic `notifications` table exists for future Laravel notification storage).
 
-### Services (built — 12)
+### Services (built — 14)
 
-`ActivityTypeService` · `AdminAuthService` · `AuthService` · `BusinessAccountService` · `CategoryService` · `ChatService` · `CityService` · `NotificationService` · `OrderService` · `OtpService` · `RatingService` · `ServiceService` · `SliderService`
-
-**Pending services** (when those features are built): `FavoriteService`, `ReportService`
+`ActivityTypeService` · `AdminAuthService` · `AuthService` · `BusinessAccountService` · `CategoryService` · `ChatService` · `CityService` · `FavoriteService` · `NotificationService` · `OrderService` · `OtpService` · `RatingService` · `ReportService` · `ServiceService` · `SliderService`
 
 ---
 
@@ -251,9 +250,9 @@ Service action (e.g. OrderService::accept)
 ```
 
 ### Components
-- **13 events** in `app/Events/` — one per domain action (BusinessAccount approved/rejected/submitted, Service approved/rejected/submitted/resubmitted/reported, Order received/accepted/rejected, RatingAdded, MessageSent)
-- **13 listeners** in `app/Listeners/` — each subscribes to one event and dispatches one notification
-- **13 notification classes** in `app/Notifications/` — all extend `BaseNotification` for shared FCM payload logic
+- **15 events** in `app/Events/` — one per domain action (BusinessAccount approved/rejected/submitted, Service approved/rejected/submitted/resubmitted/reported, Order received/accepted/rejected, RatingAdded, MessageSent, ReportApproved, ReportRejected)
+- **15 listeners** in `app/Listeners/` — each subscribes to one event and dispatches one notification
+- **15 notification classes** in `app/Notifications/` — all extend `BaseNotification` for shared FCM payload logic
 - **`FcmChannel`** in `app/Notifications/Channels/FcmChannel.php` — custom channel that calls Firebase via `kreait/laravel-firebase`
 - **Device tokens** — admins register their browser FCM tokens via `AdminDeviceTokenController`; stored in `admin_device_tokens` table. User device tokens stored on the `users` table directly.
 - **Web push for admin dashboard** — `public/firebase-messaging-sw.js` is the service worker that receives FCM messages in the browser
@@ -291,6 +290,13 @@ Rating allowed ONLY IF:
   - order.status = 'accepted'
   - no existing rating for that order_id (UNIQUE constraint on ratings.order_id)
 ```
+
+### Report
+```
+[pending] → admin approves → [approved]   ← auto-rejects the reported service
+[pending] → admin rejects  → [rejected]   ← dismissed; reporter notified with admin_note
+```
+Submitting a report dispatches `ServiceReported` (notifies admins). Approving/rejecting dispatches `ReportApproved` / `ReportRejected` (notifies the reporter). Approving also dispatches `ServiceRejected` so the service owner is notified through the existing chain.
 
 ---
 
@@ -379,6 +385,7 @@ Permission tables (Spatie) · `admins` · `cities` · `activity_types` · `busin
 | `conversations` | `UNIQUE(service_id, initiator_id, receiver_id)` |
 | `business_accounts` | `status` ENUM: `pending`, `approved`, `rejected` |
 | `services` | `status` ENUM: `pending`, `approved`, `rejected` |
+| `reports` | `status` ENUM: `pending`, `approved`, `rejected` + `admin_note` (added in Phase 6 — replaces the original `is_resolved` boolean) |
 | `orders` | `status` ENUM: `pending`, `accepted`, `rejected` |
 | `users` / `admins` | `locale` column added (`2026_05_01_..._add_locale_to_users_and_admins_table`) |
 | `notifications` | Recreated as polymorphic in `2026_05_01_..._recreate_notifications_table_polymorphic` |
@@ -428,7 +435,10 @@ POST   /api/v1/auth/refresh
 GET    /api/v1/cities
 GET    /api/v1/activity-types
 GET    /api/v1/categories
-GET    /api/v1/services                 (approved only)
+GET    /api/v1/services                 (approved only — filters: category_id,
+                                          subcategory_id, city_id, activity_type_id,
+                                          type, price_syp_min/max, price_usd_min/max,
+                                          min_rating, sort_by, search)
 GET    /api/v1/services/{id}
 
 # Protected (auth:api)
@@ -456,10 +466,12 @@ GET    /api/v1/conversations/{id}/messages    paginated message history
 POST   /api/v1/conversations/{id}/messages    send (body: {content})
 ```
 
-### Routes — NOT yet built
+### Routes — Phase 6 (built)
 ```
-GET|POST|DELETE /api/v1/favorites             ← Phase 6
-POST   /api/v1/reports                        ← Phase 6
+GET    /api/v1/favorites                      list my favorites
+POST   /api/v1/favorites                      add (body: {service_id})
+DELETE /api/v1/favorites/{service}            remove (route param is service id)
+POST   /api/v1/reports                        submit a report (body: {service_id, reason})
 ```
 
 ---
@@ -483,8 +495,10 @@ POST   /api/v1/reports                        ← Phase 6
 /admin/roles/*                            [auth:admin + manage-roles]      ← Super Admin
 /admin/admins/*                           [auth:admin + manage-admins]     ← Super Admin
 
-# Placeholder (redirects to dashboard — pending Phase 6)
-/admin/reports                            [auth:admin]
+/admin/reports                            [auth:admin + view-/manage-reports]
+/admin/reports/{report}                   [auth:admin + view-reports]
+/admin/reports/{report}/approve (POST)    [auth:admin + manage-reports]  — auto-rejects the reported service
+/admin/reports/{report}/reject  (POST)    [auth:admin + manage-reports]  — dismisses the report with admin note
 ```
 
 ---
@@ -601,9 +615,9 @@ admins/{index,create,edit}.blade.php
 notifications/index.blade.php
 ```
 
-### Admin Pages — NOT yet built
+### Admin Pages — Phase 6 (built)
 ```
-reports/{index,show}.blade.php   ← Phase 6
+reports/{index,show}.blade.php   ← Reports management with status tabs + approve/reject modals
 ```
 
 ### Every Page Uses This Pattern
@@ -655,12 +669,12 @@ reports/{index,show}.blade.php   ← Phase 6
 | FR-29 | Reject order | User | ✅ |
 | FR-30 | Delete order | User | ✅ |
 | FR-31 | Add rating | User | ✅ |
-| FR-32 | Add to favorites | User | ❌ Phase 6 |
-| FR-33 | Remove from favorites | User | ❌ Phase 6 |
-| FR-34 | Report a service | User | ❌ Phase 6 |
+| FR-32 | Add to favorites | User | ✅ |
+| FR-33 | Remove from favorites | User | ✅ |
+| FR-34 | Report a service | User | ✅ |
 | FR-35 | Manage ad sliders | Admin | ✅ |
 | FR-36 | Add city | Admin | ✅ |
-| FR-37 | Manage reports | Admin | ❌ Phase 6 |
+| FR-37 | Manage reports | Admin | ✅ |
 | FR-38 | Add role | Super Admin | ✅ |
 | FR-39 | Edit role | Super Admin | ✅ |
 | FR-40 | Delete role | Super Admin | ✅ |
@@ -681,7 +695,7 @@ reports/{index,show}.blade.php   ← Phase 6
 | 3 — Services | Week 3 | Categories, subcategories, dynamic fields, services CRUD + admin approval | ✅ |
 | 4 — Orders + Ratings + Notifications | Week 4 | Orders lifecycle, rating gate, Firebase push (events/listeners/FCM channel) | ✅ |
 | 5 — Chat | 3 days | API-only chat (send/receive text, sent/read, conversation linked to service), FCM push on new message. Pusher deferred. | ✅ |
-| 6 — Polish | Week 6 | Favorites, reports, advanced filters, bilingual audit, permission audit | ❌ |
+| 6 — Polish | Week 6 | Favorites, reports, advanced filters, bilingual audit, permission audit | ✅ |
 
 ---
 

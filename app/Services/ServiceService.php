@@ -49,7 +49,7 @@ class ServiceService
 
     public function listPublic(array $filters): LengthAwarePaginator
     {
-        return Service::with(['businessAccount', 'category', 'subcategory', 'media'])
+        $query = Service::with(['businessAccount', 'category', 'subcategory', 'media'])
             ->where('status', 'approved')
             ->when(
                 isset($filters['category_id']),
@@ -62,6 +62,14 @@ class ServiceService
             ->when(
                 isset($filters['type']),
                 fn($q) => $q->where('type', $filters['type'])
+            )
+            ->when(
+                isset($filters['city_id']),
+                fn($q) => $q->whereHas('businessAccount', fn($b) => $b->where('city_id', $filters['city_id']))
+            )
+            ->when(
+                isset($filters['activity_type_id']),
+                fn($q) => $q->whereHas('businessAccount', fn($b) => $b->where('activity_type_id', $filters['activity_type_id']))
             )
             ->when(
                 isset($filters['price_syp_min']),
@@ -80,6 +88,11 @@ class ServiceService
                 fn($q) => $q->where('price_usd', '<=', $filters['price_usd_max'])
             )
             ->when(
+                isset($filters['min_rating']),
+                fn($q) => $q->withAvg('ratings', 'rating')
+                            ->having('ratings_avg_rating', '>=', $filters['min_rating'])
+            )
+            ->when(
                 isset($filters['search']),
                 function ($q) use ($filters) {
                     $words = array_filter(explode(' ', $filters['search']));
@@ -87,9 +100,16 @@ class ServiceService
                         $q->whereRaw("JSON_SEARCH(LOWER(title), 'one', LOWER(?)) IS NOT NULL", ["%{$word}%"]);
                     }
                 }
-            )
-            ->latest()
-            ->paginate(15);
+            );
+
+        match ($filters['sort_by'] ?? 'newest') {
+            'oldest'     => $query->oldest(),
+            'price_asc'  => $query->orderByRaw('COALESCE(price_syp, price_usd * 14000) ASC'),
+            'price_desc' => $query->orderByRaw('COALESCE(price_syp, price_usd * 14000) DESC'),
+            default      => $query->latest(),
+        };
+
+        return $query->paginate(15);
     }
 
     // ─── API — User ───────────────────────────────────────────────────────────

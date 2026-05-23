@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\CityController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DynamicFieldController;
 use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
+use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\SliderController;
@@ -118,8 +119,15 @@ Route::prefix('admin')->group(function () {
             Route::delete('/sliders/{slider}', [SliderController::class, 'destroy'])->name('sliders.destroy');
         });
 
-        // Placeholder routes for Phase 6+ (sidebar links — prevents errors)
-        Route::get('/reports', fn() => redirect()->route('admin.dashboard'))->name('reports.index');
+        // Reports
+        Route::middleware('permission:view-reports')->group(function () {
+            Route::get('/reports',          [ReportController::class, 'index'])->name('reports.index');
+            Route::get('/reports/{report}', [ReportController::class, 'show'])->name('reports.show');
+        });
+        Route::middleware('permission:manage-reports')->group(function () {
+            Route::post('/reports/{report}/approve', [ReportController::class, 'approve'])->name('reports.approve');
+            Route::post('/reports/{report}/reject',  [ReportController::class, 'reject'])->name('reports.reject');
+        });
 
         // Roles (Super Admin only)
         Route::middleware('permission:manage-roles')->group(function () {

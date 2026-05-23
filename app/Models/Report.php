@@ -11,15 +11,9 @@ class Report extends Model
         'user_id',
         'service_id',
         'reason',
-        'is_resolved',
+        'status',
+        'admin_note',
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'is_resolved' => 'boolean',
-        ];
-    }
 
     public function user(): BelongsTo
     {
