@@ -76,6 +76,19 @@ php artisan optimize:clear    # clear all caches (do this BEFORE editing config/
 
 **IMPORTANT:** After ANY change to `.env`, `config/*`, `routes/*`, or `bootstrap/app.php`, run `php artisan optimize:clear` first or the change will not be picked up. Re-run `php artisan optimize && php artisan view:cache` afterwards. Blade view edits are auto-detected — no clear needed.
 
+### Running it FAST vs. developing
+
+```bash
+composer start   # FAST browsing: optimize + view:cache + serve (warm caches, built assets)
+composer dev     # DEVELOPING: clears caches + Vite dev server + queue (slower, picks up edits live)
+```
+
+- **`composer start`** is the everyday "just run it quickly" command. It warms all caches and serves with the pre-built assets, so every page is fast on the *first* visit. Use this unless you are actively editing PHP/config.
+- **`composer dev`** intentionally starts with `optimize:clear` (so code/config edits show up immediately) and runs the Vite dev server (on-demand asset transforms). This is inherently slower — only use it while coding. After finishing, run `composer start` (or `php artisan optimize && php artisan view:cache`) to go fast again.
+- **Why pages were "slow first click, fast second click":** with no warm caches, Laravel compiled each Blade view on its first request and re-parsed config/routes every request. `view:cache` precompiles all views up front; `optimize` caches config/routes/events. Fixed 2026-05-23.
+
+> ⚠️ **OPcache gotcha (this machine):** XAMPP ships **ZTS (thread-safe) PHP 8.2.12**. Setting `opcache.enable_cli=1` in `C:\xampp\php\php.ini` **segfaults** (`0xC0000005`) the moment Laravel bootstraps on the CLI — it breaks every `php artisan` command, `composer dev`, and the queue worker. **Keep `opcache.enable_cli=0`.** OPcache is fine for the **web/Apache** SAPI (`opcache.enable=1`), so for maximum speed serve the app through XAMPP Apache (DocumentRoot → `public/`) rather than `php artisan serve` — Apache gets working OPcache and concurrent requests, whereas `php artisan serve` on Windows is single-threaded with no opcode cache. Also note: `PHP_CLI_SERVER_WORKERS` has no effect on Windows (the built-in server can't fork).
+
 ---
 
 ## Installed Packages (composer.json)

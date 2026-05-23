@@ -17,19 +17,14 @@ use App\Http\Controllers\Admin\SliderController;
 use App\Http\Controllers\Chat\AuthController as ChatAuthController;
 use App\Http\Controllers\Chat\ConversationController as ChatConversationController;
 use App\Http\Controllers\Chat\ServiceBrowserController as ChatServiceBrowserController;
+use App\Http\Controllers\LocaleController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return redirect()->route('admin.login');
-});
+Route::redirect('/', '/admin/login');
 
-
-Route::get('/locale/{lang}', function (string $lang) {
-    if (in_array($lang, ['en', 'ar'])) {
-        session(['locale' => $lang]);
-    }
-    return redirect()->back();
-})->name('locale.switch');
+Route::get('/locale/{lang}', [LocaleController::class, 'switch'])
+    ->whereIn('lang', ['en', 'ar'])
+    ->name('locale.switch');
 
 // ─── Marketplace Chat (session/web guard — phone + password, no OTP) ──────────
 Route::prefix('chat')->name('chat.')->group(function () {
