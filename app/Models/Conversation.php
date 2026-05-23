@@ -11,6 +11,7 @@ class Conversation extends Model
     protected $fillable = [
         'service_id',
         'initiator_id',
+        'initiator_business_account_id',
         'receiver_id',
     ];
 
@@ -22,6 +23,14 @@ class Conversation extends Model
     public function initiator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'initiator_id');
+    }
+
+    /**
+     * The business account the initiator is acting as (null = plain user).
+     */
+    public function initiatorBusinessAccount(): BelongsTo
+    {
+        return $this->belongsTo(BusinessAccount::class, 'initiator_business_account_id');
     }
 
     public function receiver(): BelongsTo

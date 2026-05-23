@@ -14,6 +14,9 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\SliderController;
+use App\Http\Controllers\Chat\AuthController as ChatAuthController;
+use App\Http\Controllers\Chat\ConversationController as ChatConversationController;
+use App\Http\Controllers\Chat\ServiceBrowserController as ChatServiceBrowserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -27,6 +30,25 @@ Route::get('/locale/{lang}', function (string $lang) {
     }
     return redirect()->back();
 })->name('locale.switch');
+
+// ─── Marketplace Chat (session/web guard — phone + password, no OTP) ──────────
+Route::prefix('chat')->name('chat.')->group(function () {
+    Route::get('/login',  [ChatAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [ChatAuthController::class, 'login'])->name('login.submit');
+    Route::post('/logout', [ChatAuthController::class, 'logout'])->name('logout');
+
+    Route::middleware('auth:web')->group(function () {
+        Route::get('/', [ChatConversationController::class, 'index'])->name('index');
+
+        Route::get('/services', [ChatServiceBrowserController::class, 'index'])->name('services.index');
+
+        Route::post('/conversations', [ChatConversationController::class, 'start'])->name('conversations.start');
+        Route::get('/conversations/{id}', [ChatConversationController::class, 'show'])->name('conversations.show');
+        Route::get('/conversations/{id}/messages', [ChatConversationController::class, 'messages'])->name('conversations.messages');
+        Route::post('/conversations/{id}/messages', [ChatConversationController::class, 'send'])->name('conversations.send');
+        Route::post('/conversations/{id}/read', [ChatConversationController::class, 'read'])->name('conversations.read');
+    });
+});
 
 // Admin routes
 Route::prefix('admin')->group(function () {

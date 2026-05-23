@@ -12,12 +12,15 @@ use Illuminate\Database\Eloquent\Collection;
 
 class ChatService
 {
-    public function startConversation(int $serviceId, User $user): Conversation
+    public function startConversation(int $serviceId, User $user, ?int $businessAccountId = null): Conversation
     {
         $service = Service::with('businessAccount')->findOrFail($serviceId);
 
         $receiverId = $service->businessAccount?->user_id;
 
+        // The receiver is always the service owner — who, by definition, holds an
+        // approved business account. This makes the "business account" side always
+        // present, so user↔user conversations are structurally impossible.
         abort_if(
             $receiverId === null,
             422,
@@ -30,17 +33,40 @@ class ChatService
             'You cannot start a conversation about your own service.'
         );
 
+        // Optional "wallet": the initiator may act as one of their own approved
+        // business accounts (business↔business) instead of as a plain user.
+        if ($businessAccountId !== null) {
+            $businessAccount = $user->businessAccounts()->find($businessAccountId);
+
+            abort_if(
+                $businessAccount === null,
+                403,
+                'That business account does not belong to you.'
+            );
+
+            abort_if(
+                $businessAccount->status !== 'approved',
+                422,
+                'You can only chat through an approved business account.'
+            );
+        }
+
         $conversation = Conversation::firstOrCreate(
             [
                 'service_id'   => $service->id,
                 'initiator_id' => $user->id,
                 'receiver_id'  => $receiverId,
+            ],
+            [
+                // Recorded once, on first creation only.
+                'initiator_business_account_id' => $businessAccountId,
             ]
         );
 
         return $conversation->load([
             'service.businessAccount',
             'initiator',
+            'initiatorBusinessAccount',
             'receiver',
         ]);
     }
@@ -50,6 +76,7 @@ class ChatService
         return Conversation::with([
                 'service.businessAccount',
                 'initiator',
+                'initiatorBusinessAccount',
                 'receiver',
                 'messages' => fn($q) => $q->latest()->limit(1),
             ])
@@ -64,6 +91,7 @@ class ChatService
         $conversation = Conversation::with([
             'service.businessAccount',
             'initiator',
+            'initiatorBusinessAccount',
             'receiver',
         ])->findOrFail($conversationId);
 
