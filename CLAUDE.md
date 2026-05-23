@@ -32,11 +32,11 @@ A regulated digital marketplace for real estate and construction-related service
 | **2 — Roles + Business Accounts** | Spatie permissions, cities, activity types, business account workflow | ✅ Complete |
 | **3 — Services** | Categories, dynamic fields, services CRUD + admin approval | ✅ Complete |
 | **4 — Orders + Ratings + Notifications** | Orders lifecycle, rating gate, Firebase FCM push, Event/Listener system | ✅ Complete |
-| **5 — Chat** | API-only chat (no Pusher), sent/read status, FCM push on new message | ✅ Complete (API-only — Pusher deferred) |
+| **5 — Chat** | API chat + **real-time Pusher private channels** + **standalone Blade chat UI** for marketplace users | ✅ Complete (Pusher wired; activate by adding keys — see `PUSHER_SETUP.md`) |
 | **6 — Polish** | Favorites API, Reports (API + admin), advanced filters, bilingual + permission audit | ✅ Complete |
 
 ### Outstanding gaps in built features
-- **Pusher** — `pusher/pusher-php-server` is **not installed** by design (chat ships API-only). Adding it later only requires making `MessageSent` implement `ShouldBroadcast` + configuring `config/broadcasting.php` — no controller/service changes
+- **Pusher keys** — chat is fully wired for real time: `MessageSent` is `ShouldBroadcastNow` on `private-conversations.{id}` (event `message.sent`), `routes/channels.php` authorizes participants only, and Laravel Echo + pusher-js init in `resources/js/echo.js` (guarded on `VITE_PUSHER_APP_KEY`). Ships with `BROADCAST_CONNECTION=log` so nothing errors before configuration. To go live: add `PUSHER_*` keys, set `BROADCAST_CONNECTION=pusher`, `php artisan optimize:clear`, `npm run build`. **See `PUSHER_SETUP.md`.**
 
 ---
 
@@ -88,9 +88,11 @@ php artisan optimize:clear    # clear all caches (do this BEFORE editing config/
 | `spatie/laravel-translatable` | ^6.0 | Bilingual JSON columns |
 | `spatie/laravel-medialibrary` | ^11.21 | Image/file uploads (used in place of intervention/image) |
 | `kreait/laravel-firebase` | ^6.2 | Firebase FCM push notifications |
+| `pusher/pusher-php-server` | ^7.2 | Real-time chat broadcasting (Pusher Channels) |
 
-**Not installed (required for Phase 5 chat):**
-- `pusher/pusher-php-server` — install with `composer require pusher/pusher-php-server` when starting chat work
+**Frontend (package.json):** `laravel-echo` + `pusher-js` (real-time client, init in `resources/js/echo.js`), `alpinejs`, `axios`, Tailwind v4 via `@tailwindcss/vite`.
+
+> Activation: chat broadcasting is wired but inert until `PUSHER_*` keys are set and `BROADCAST_CONNECTION=pusher` (default is `log`). See `PUSHER_SETUP.md`.
 
 ---
 
@@ -112,7 +114,7 @@ Request
 - **Services own business logic** — see "Services (built)" below
 - **Events + Listeners** drive notifications (no inline `Notification::send()` calls inside services)
 - **API Resources** transform Eloquent models → JSON for mobile app
-- **Blade views** are admin dashboard ONLY — never for API responses
+- **Blade views** serve the admin dashboard AND the standalone marketplace **chat UI** (`/chat/*`, `web` guard) — never for API responses. The chat UI uses its own layout (`layouts/chat.blade.php`), NOT the admin layout
 
 ### Directory Layout (actual)
 
@@ -175,13 +177,13 @@ routes/
 
 > **Note:** `service_images` migration exists but no `ServiceImage` model — `Service` uses Spatie MediaLibrary (`HasMedia`) for images instead. There is also no separate `Notification` Eloquent model; notifications are delivered via the FCM channel (not stored in the DB as Eloquent models — though the polymorphic `notifications` table exists for future Laravel notification storage).
 
-### Services (built — 14)
+### Services (built — 15)
 
-`ActivityTypeService` · `AdminAuthService` · `AuthService` · `BusinessAccountService` · `CategoryService` · `ChatService` · `CityService` · `FavoriteService` · `NotificationService` · `OrderService` · `OtpService` · `RatingService` · `ReportService` · `ServiceService` · `SliderService`
+`ActivityTypeService` · `AdminAuthService` · `AuthService` · `BusinessAccountService` · `CategoryService` · `ChatService` · `CityService` · `FavoriteService` · `NotificationService` · `OrderService` · `OtpService` · `RatingService` · `ReportService` · `ServiceService` · `SliderService` · `UserAuthService` (web-guard login for the chat UI)
 
 ---
 
-## Authentication — Two Separate Guards
+## Authentication — Three Guards
 
 ### Guard 1: Mobile API Users → Laravel Passport (OAuth2)
 
@@ -216,6 +218,21 @@ routes/
 - Uses custom `tab-session` driver (extends standard session driver) to support **multiple admin tabs** with independent state, paired with `InjectTabId` middleware
 - Separate `admins` table (Spatie `HasRoles` trait)
 - Middleware: `auth:admin`
+
+### Guard 3: Marketplace Chat UI → `web` (session)
+
+```php
+// config/auth.php
+'guards' => [
+    'web' => ['driver' => 'session', 'provider' => 'users'],
+]
+```
+
+- Powers the standalone Blade **chat UI** at `/chat/*` (separate from mobile API and admin)
+- Marketplace users log in with **phone + password — NO OTP** (`UserAuthService::login` → `Auth::guard('web')->attempt(['phone'=>…,'password'=>…], $remember)`)
+- Same `users` table/model as the Passport API; `remember_token` column added for "remember me"
+- Middleware: `auth:web`. Guests on `/chat/*` and `/broadcasting/auth` redirect to `chat.login` (path-aware `redirectGuestsTo` in `bootstrap/app.php`); all other guests still go to `admin.login`
+- Used for Pusher private-channel authorization (`/broadcasting/auth` resolves the default `web` guard)
 
 ---
 
@@ -456,7 +473,7 @@ POST   /api/v1/notifications/read-all
 GET    /api/v1/notifications/unread-count
 ```
 
-### Routes — Phase 5 Chat (built, API-only)
+### Routes — Phase 5 Chat (mobile API)
 ```
 GET    /api/v1/conversations                  list my conversations
 POST   /api/v1/conversations                  start (body: {service_id})
@@ -465,6 +482,27 @@ POST   /api/v1/conversations/{id}/read        mark all incoming messages as read
 GET    /api/v1/conversations/{id}/messages    paginated message history
 POST   /api/v1/conversations/{id}/messages    send (body: {content})
 ```
+
+### Routes — Phase 5 Chat (Blade web UI, `web` guard, real-time)
+```
+# Public
+GET    /chat/login                            login form (phone + password, no OTP)
+POST   /chat/login                            authenticate (web guard)
+POST   /chat/logout
+
+# Protected (auth:web)
+GET    /chat                                  inbox (my conversations)
+GET    /chat/services                         searchable approved-service browser (reuses ServiceService::listPublic)
+POST   /chat/conversations                    start (body: {service_id, initiator_business_account_id?})  ← "wallet" picker
+GET    /chat/conversations/{id}               live thread (Alpine + Echo, subscribes private-conversations.{id})
+GET    /chat/conversations/{id}/messages      JSON message history
+POST   /chat/conversations/{id}/messages      send (JSON {content}) → 201 + broadcasts MessageSent
+POST   /chat/conversations/{id}/read          mark incoming as read
+
+# Broadcasting auth (registered via withRouting channels:)
+POST   /broadcasting/auth                     private-channel auth (web guard); callback in routes/channels.php
+```
+- `conversations.initiator_business_account_id` (nullable) records which approved business account the initiator acts as. Receiver is always the service owner (a business account) → **user↔user is structurally impossible**; enforced in `ChatService::startConversation` + the channel-auth callback.
 
 ### Routes — Phase 6 (built)
 ```
@@ -509,7 +547,7 @@ POST   /api/v1/reports                        submit a report (body: {service_id
 |---|---|---|---|
 | WhatsApp OTP | UltraMsg | Send OTP via WhatsApp | `ULTRAMSG_INSTANCE_ID`, `ULTRAMSG_TOKEN` |
 | Push Notifications | Firebase FCM | Push to mobile + admin browser (via `kreait/laravel-firebase` + custom `FcmChannel`) | `FIREBASE_CREDENTIALS` (path to JSON file) |
-| Real-time Chat | Pusher | **Private channel** chat (1-to-1) — **NOT YET INSTALLED** | `PUSHER_APP_ID`, `PUSHER_APP_KEY`, `PUSHER_APP_SECRET`, `PUSHER_APP_CLUSTER` |
+| Real-time Chat | Pusher | **Private channel** chat — installed & wired (`pusher/pusher-php-server` + laravel-echo). Activate by adding keys + `BROADCAST_CONNECTION=pusher` (see `PUSHER_SETUP.md`) | `PUSHER_APP_ID`, `PUSHER_APP_KEY`, `PUSHER_APP_SECRET`, `PUSHER_APP_CLUSTER`, `VITE_PUSHER_*` |
 | Maps | Google Maps embed | Location display (no backend key) | None |
 
 ---

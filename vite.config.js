@@ -21,6 +21,7 @@ export default defineConfig({
             output: {
                 manualChunks: {
                     vendor: ['alpinejs', 'axios'],
+                    realtime: ['laravel-echo', 'pusher-js'],
                 },
             },
         },
