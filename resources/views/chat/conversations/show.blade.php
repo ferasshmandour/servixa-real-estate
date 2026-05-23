@@ -79,11 +79,24 @@
                 </div>
             </div>
         </template>
+
+        {{-- Typing indicator (animated dots) --}}
+        <template x-if="typing">
+            <div class="flex justify-start">
+                <div class="bg-white border border-[#DDD6FE] rounded-2xl rounded-es-sm px-4 py-3 shadow-sm">
+                    <div class="flex items-center gap-1" aria-label="{{ __('chat.typing') }}">
+                        <span class="w-1.5 h-1.5 bg-[#6B21A8] rounded-full animate-bounce" style="animation-delay:0ms"></span>
+                        <span class="w-1.5 h-1.5 bg-[#6B21A8] rounded-full animate-bounce" style="animation-delay:150ms"></span>
+                        <span class="w-1.5 h-1.5 bg-[#6B21A8] rounded-full animate-bounce" style="animation-delay:300ms"></span>
+                    </div>
+                </div>
+            </div>
+        </template>
     </div>
 
     {{-- Composer --}}
     <form x-on:submit.prevent="send()" class="bg-white border-t border-[#DDD6FE] px-4 py-3 flex items-center gap-3">
-        <input type="text" x-model="draft" :disabled="sending"
+        <input type="text" x-model="draft" x-on:input="notifyTyping()" :disabled="sending"
                placeholder="{{ __('chat.type_message') }}" autocomplete="off"
                class="flex-1 px-4 py-2.5 rounded-full border border-[#DDD6FE] text-sm focus:outline-none focus:ring-2 focus:ring-[#6B21A8] focus:border-transparent">
         <button type="submit" :disabled="sending || draft.trim() === ''"
@@ -104,19 +117,35 @@
             draft: '',
             sending: false,
             connected: false,
+            typing: false,           // is the OTHER party currently typing
+            typingTimeout: null,     // hides the indicator after inactivity
+            lastWhisper: 0,          // throttle for outgoing typing whispers
+            channel: null,
             csrf: document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
 
             init() {
                 this.$nextTick(() => this.scrollToBottom());
 
                 if (window.Echo) {
-                    const channel = window.Echo.private('conversations.' + this.conversationId);
-                    channel.listen('.message.sent', (e) => {
+                    this.channel = window.Echo.private('conversations.' + this.conversationId);
+
+                    this.channel.listen('.message.sent', (e) => {
                         this.appendMessage(e);
                         if (e.sender_id !== this.currentUserId) {
+                            this.clearTyping();   // a real message means they stopped typing
                             this.markRead();
                         }
                     });
+
+                    // Peer-to-peer "typing" via Pusher client events (whispers).
+                    this.channel.listenForWhisper('typing', (e) => {
+                        if (e.user_id === this.currentUserId) return;
+                        this.typing = true;
+                        this.$nextTick(() => this.scrollToBottom());
+                        clearTimeout(this.typingTimeout);
+                        this.typingTimeout = setTimeout(() => { this.typing = false; }, 2500);
+                    });
+
                     // Pusher connection state → "live" indicator.
                     if (window.Echo.connector?.pusher) {
                         const pusher = window.Echo.connector.pusher;
@@ -126,6 +155,21 @@
                         });
                     }
                 }
+            },
+
+            // Tell the other participant we're typing, at most once every 1.5s.
+            notifyTyping() {
+                if (!this.channel) return;
+                const now = Date.now();
+                if (now - this.lastWhisper > 1500) {
+                    this.lastWhisper = now;
+                    this.channel.whisper('typing', { user_id: this.currentUserId });
+                }
+            },
+
+            clearTyping() {
+                this.typing = false;
+                clearTimeout(this.typingTimeout);
             },
 
             appendMessage(m) {

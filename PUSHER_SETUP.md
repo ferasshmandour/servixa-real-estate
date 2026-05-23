@@ -52,6 +52,15 @@ php artisan optimize && php artisan view:cache
 
 That's it. The chat thread page subscribes to `private-conversations.{id}` and listens for the `.message.sent` event; new messages now arrive live.
 
+## 4. Enable client events (for the "typing…" indicator)
+
+The typing indicator uses Pusher **client events** (whispers, peer-to-peer over the private channel). These are rejected unless you turn them on:
+
+1. Pusher dashboard → your app → **App Settings**.
+2. Tick **"Enable client events"** → Save.
+
+No keys or rebuild needed — the toggle takes effect immediately. (Messaging itself works without this; only the typing dots need it.)
+
 ---
 
 ## How to test real-time
@@ -62,12 +71,14 @@ That's it. The chat thread page subscribes to `private-conversations.{id}` and l
    - `http://localhost:8000/chat/login` — phone + password (same credentials as the Servixa app).
 4. As user A: **Browse services** → pick a service owned by user B → choose "Act as" (yourself or one of your approved business accounts) → **Chat**.
 5. Open the same conversation as user B. Send a message from A → it appears in B's window within ~1 second, and the Debug Console shows `message.sent` on `private-conversations.{id}`.
+6. **Typing:** start typing in A's composer (don't send) → B sees the animated "typing…" dots; they disappear ~2.5s after A stops, or when A's message arrives. (Requires step 4 above — client events enabled.)
 
 ---
 
 ## Notes & troubleshooting
 
-- **Participants only.** `routes/channels.php` authorizes `private-conversations.{id}` only for the conversation's two participants, so outsiders get a 403 from `/broadcasting/auth`.
+- **Typing dots not showing?** Enable **client events** in the Pusher dashboard (App Settings). Whispers are silently dropped otherwise. Messaging is unaffected.
+- **Participants only.** `routes/channels.php` authorizes `private-conversations.{id}` only for the conversation's two participants, so outsiders get a 403 from `/broadcasting/auth`. Typing whispers ride the same private channel, so only the two participants can send/see them.
 - **user ↔ user is impossible.** The receiver is always the service owner, who holds an approved business account — so every chat is business↔business or business↔user. The "Act as" picker records which business account the initiator is using (`conversations.initiator_business_account_id`).
 - **Synchronous broadcast.** `MessageSent` is `ShouldBroadcastNow`, so it broadcasts in-request regardless of the queue. (FCM push for the message still goes through the queue — run `php artisan queue:work` for those.)
 - **419 on send / channel auth?** The chat layout includes `<meta name="csrf-token">` and Echo sends it as `X-CSRF-TOKEN`. If you customized the layout, keep that meta tag.

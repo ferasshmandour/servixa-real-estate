@@ -54,4 +54,5 @@ return [
     'live'           => 'Live',
     'business'       => 'Business',
     'user'           => 'User',
+    'typing'         => 'typing…',
 ];
